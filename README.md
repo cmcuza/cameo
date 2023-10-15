@@ -1,3 +1,6 @@
-# CAMEO: 
+# CAMEO: Autocorrelation-preserving Line Simplification for Lossy Time Series Compression (Under submission SIGMOD 2024) 
 
-> :warning: **Notice:** This repository and its contents are not to be distributed.
+
+
+
+
