@@ -1,11 +1,11 @@
-from compression.cython cimport heap, math_utils
-from compression.cython.heap cimport Heap, Node
+from cameo cimport heap, math_utils
+from cameo.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from cython.parallel cimport prange, parallel
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-from compression.cython cimport inc_acf
-from compression.cython.inc_acf cimport AcfAgg
+from cameo cimport inc_acf
+from cameo.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np
@@ -290,9 +290,9 @@ cdef void look_ahead_reheap(AcfAgg *acf_agg, Heap *acf_errors, unordered_map[int
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops, int nlags, double acf_threshold):
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(long [:] x, double[:] y, int hops, int nlags, double acf_threshold):
     cdef:
-        int start, end, lag, n = y.shape[0]
+        int start, end, lag, n = x.shape[0]
         double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
         double * raw_acf = <double *> malloc(nlags * sizeof(double))
         double * error_values = <double *> malloc(n * sizeof(double))

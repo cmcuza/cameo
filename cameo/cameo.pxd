@@ -1,6 +1,6 @@
-from compression.cython.heap cimport Heap, Node
+from cameo.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
-from compression.cython.inc_acf cimport AcfAgg
+from cameo.inc_acf cimport AcfAgg
 import numpy as np
 cimport numpy as np
 

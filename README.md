@@ -37,7 +37,7 @@ python setup.py build_ext --inplace
 To run a simple example run the main script. The main script expects a dataset name and the acf error-bound, for example:
 
 ```bash
-python main 'hepc' 0.001
+python main hepc 0.001
 ```
 
 

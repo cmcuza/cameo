@@ -1,0 +1,8 @@
+*.pyd
+*.cpp
+*.html
+/build/
+/cameo/cameo/
+__pycache__
+cameo/__pycache__
+*.idea

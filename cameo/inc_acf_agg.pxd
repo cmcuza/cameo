@@ -1,4 +1,4 @@
-from compression.cython.inc_acf cimport AcfPtr
+from cameo.inc_acf cimport AcfPtr
 
 cdef void fit_mean(AcfPtr model, double[:] x, double [:] aggregates, int kappa)
 

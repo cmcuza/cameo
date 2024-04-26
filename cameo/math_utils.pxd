@@ -1,4 +1,4 @@
-from compression.cython.inc_acf cimport AcfAgg
+from cameo.inc_acf cimport AcfAgg
 
 cdef double dot_product(double[:] x, double[:] y)
 

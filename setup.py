@@ -14,40 +14,40 @@ else:
 
 extensions = [
     Extension(
-        name="compression.cython.heap",
-        sources=["heap.pyx"],
+        name="cameo.heap",
+        sources=["cameo/heap.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compression.cython.cameo",
-        sources=["cameo.pyx"],
+        name="cameo.cameo",
+        sources=["cameo/cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="compression.cython.agg_cameo",
-        sources=["agg_cameo.pyx"],
+        name="cameo.agg_cameo",
+        sources=["cameo/agg_cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="compression.cython.inc_acf",
-        sources=["inc_acf.pyx"],
+        name="cameo.inc_acf",
+        sources=["cameo/inc_acf.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compression.cython.inc_acf_agg",
-        sources=["inc_acf_agg.pyx"],
+        name="cameo.inc_acf_agg",
+        sources=["cameo/inc_acf_agg.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compression.cython.math_utils",
-        sources=["math_utils.pyx"],
+        name="cameo.math_utils",
+        sources=["cameo/math_utils.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
@@ -55,9 +55,9 @@ extensions = [
 ]
 
 setup(
-    name='ccameo',
+    name='cameo',
     version="0.1",
-    packages=["cython_modules"],
+    packages=["cameo"],
     # extra_compile_args=["-g"],
     ext_modules=cythonize(extensions,
                           show_all_warnings=True,

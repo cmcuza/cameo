@@ -2,7 +2,7 @@ import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-from compression.cython cimport math_utils
+from cameo cimport math_utils
 cimport cython
 
 

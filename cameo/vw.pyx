@@ -1,10 +1,10 @@
-from cython_modules cimport heap, math_utils
-from cython_modules.heap cimport Heap, Node
+cimport heap, math_utils
+from heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from libc.stdlib cimport malloc, free
 cimport cython
-from cython_modules cimport inc_acf, inc_acf_agg
-from cython_modules.inc_acf cimport AcfAgg
+cimport inc_acf, inc_acf_agg
+from inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np
