@@ -2,7 +2,7 @@ cimport cython
 from libc.math cimport fabs, sqrt
 from cython.parallel cimport prange, parallel
 from libc.stdlib cimport malloc, free, abort
-from cython_modules.inc_acf cimport AcfAgg
+from compression.cython.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 
 
@@ -55,7 +55,7 @@ cdef void cumsum_cumsum(double[:] arr, double[:] cumsum1, double[:] cumsum2):
         int chunk_size = n // num_threads
         int tid, start, end, i
 
-    for tid in prange(num_threads, nogil=True, num_threads=num_threads):
+    for tid in prange(num_threads, nogil=True, num_threads=num_threads, schedule='static'):
         start = tid * chunk_size
         end = start + chunk_size if tid != num_threads - 1 else n
         scan(arr[start:end], cumsum1[start:end], cumsum2[start:end])
@@ -68,7 +68,7 @@ cdef void cumsum_cumsum(double[:] arr, double[:] cumsum1, double[:] cumsum2):
         sums2[i] = sums2[i - 1] + cumsum2[(i+1) * chunk_size - 1]
 
 
-    for tid in prange(1, num_threads, nogil=True, num_threads=num_threads):
+    for tid in prange(1, num_threads, nogil=True, num_threads=num_threads, schedule='static'):
         start = tid * chunk_size
         end = start + chunk_size if tid != num_threads - 1 else n
         for i in range(start, end):
@@ -165,8 +165,7 @@ cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double 
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef double * c_acf
     cdef int index, lag, n
-    acf_error[0] = INFINITY
-    acf_error[model.n - 1] = INFINITY
+    acf_error[0] = acf_error[model.n-1] = INFINITY
 
     with nogil, parallel():
         c_acf = <double *> malloc(model.nlags * sizeof(double))
@@ -174,7 +173,7 @@ cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double 
         if c_acf is NULL:
             abort()
 
-        for index in prange(1, model.n-1):
+        for index in prange(1, model.n-1, schedule='static'):
             delta = (x[index-1] + x[index+1]) * 0.5 - x[index]
             delta_ss = delta * (delta + 2*x[index])
             n = model.n - 1
@@ -227,7 +226,7 @@ cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double 
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void compute_acf_agg_fall(AcfAgg *model, double [:]x, double [:]aggregates,
+cdef void compute_acf_agg_mean_fall(AcfAgg *model, double [:]x, double [:]aggregates,
                                double *raw_acf, double *acf_error, int x_n, int kappa) nogil:
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef double *c_acf
@@ -240,8 +239,75 @@ cdef void compute_acf_agg_fall(AcfAgg *model, double [:]x, double [:]aggregates,
         if c_acf is NULL:
             abort()
 
-        for index in prange(1, x_n-1):
+        for index in prange(1, x_n-1, schedule='static'):
             delta = ((x[index-1] + x[index+1]) * 0.5 - x[index])/kappa
+            agg_index = index // kappa
+            delta_ss = delta * (2 * aggregates[agg_index] + delta)
+            n = model.n - 1
+            if model.nlags <= agg_index < model.n - model.nlags:
+                # compute_pw_acf_outside_lags
+                for lag in range(model.nlags):
+                    ys = model.ys[lag] + delta
+                    yss = model.yss[lag] + delta_ss
+                    xs = model.xs[lag] + delta
+                    xss = model.xss[lag] + delta_ss
+                    sxy = model.sxy[lag] + delta * (aggregates[agg_index + lag + 1] + aggregates[agg_index-lag-1])
+                    c_acf[lag] = (n * sxy - xs * ys) / sqrt((n * xss - xs * xs) * (n * yss - ys * ys))
+                    n = n - 1
+
+            elif agg_index < model.nlags:
+                # compute_pw_acf_bellow_lower_lags
+                for lag in range(model.nlags):
+                    xs = model.xs[lag] + delta
+                    xss = model.xss[lag] + delta_ss
+                    sxy = model.sxy[lag] + delta * aggregates[agg_index + lag + 1]
+                    ys = model.ys[lag]
+                    yss = model.yss[lag]
+                    if agg_index >= lag + 1:
+                        ys = ys + delta
+                        yss = yss + delta_ss
+                        sxy = sxy + delta * aggregates[agg_index-lag-1]
+                    c_acf[lag] = (n * sxy - xs * ys) / sqrt((n * xss - xs * xs) * (n * yss - ys * ys))
+                    n = n - 1
+            else:
+                # compute_pw_acf_above_upper_lags
+                for lag in range(model.nlags):
+                    ys = model.ys[lag] + delta
+                    yss = model.yss[lag] + delta_ss
+                    sxy = model.sxy[lag] + delta * aggregates[agg_index-lag-1] # + (delta * x[index + lag + 1]) if index + lag + 1 < model.n else 0
+                    xs = model.xs[lag] # + delta if index + lag + 1 < model.n else 0
+                    xss = model.xss[lag] # + delta_ss if index + lag + 1 < model.n else 0
+                    if agg_index < n:
+                        xs = xs + delta
+                        xss = xss + delta_ss
+                        sxy = sxy + delta * aggregates[agg_index + lag + 1]
+
+                    c_acf[lag] = (n * sxy - xs * ys) / sqrt((n * xss - xs * xs) * (n * yss - ys * ys))
+                    n = n - 1
+
+            acf_error[index] = no_gil_mae(raw_acf, c_acf, model.nlags)
+
+        free(c_acf)
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef void compute_acf_agg_sum_fall(AcfAgg *model, double [:]x, double [:]aggregates,
+                               double *raw_acf, double *acf_error, int x_n, int kappa) nogil:
+    cdef double delta, delta_ss, ys, yss, xs, xss, sxy
+    cdef double *c_acf
+    cdef int index, lag, n, agg_index
+    acf_error[0] = acf_error[x_n-1] = INFINITY
+
+    with nogil, parallel():
+        c_acf = <double *> malloc(model.nlags * sizeof(double))
+
+        if c_acf is NULL:
+            abort()
+
+        for index in prange(1, x_n-1, schedule='static'):
+            delta = ((x[index-1] + x[index+1]) * 0.5 - x[index])
             agg_index = index // kappa
             delta_ss = delta * (2 * aggregates[agg_index] + delta)
             n = model.n - 1

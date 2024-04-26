@@ -1,4 +1,4 @@
-from cython_modules.inc_acf cimport AcfAgg
+from compression.cython.inc_acf cimport AcfAgg
 
 cdef double dot_product(double[:] x, double[:] y)
 
@@ -22,5 +22,8 @@ cdef double std(double[:] x, const double & mu)
 
 cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double * acf_error) nogil
 
-cdef void compute_acf_agg_fall(AcfAgg *model, double [:]x, double [:]aggregates,
+cdef void compute_acf_agg_mean_fall(AcfAgg *model, double [:]x, double [:]aggregates,
+                               double *raw_acf, double *acf_error, int x_n, int kappa) nogil
+
+cdef void compute_acf_agg_sum_fall(AcfAgg *model, double [:]x, double [:]aggregates,
                                double *raw_acf, double *acf_error, int x_n, int kappa) nogil

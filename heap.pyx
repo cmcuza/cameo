@@ -235,8 +235,6 @@ cdef bint empty(HeapPtr heap):
 
 
 cdef void release_memory(HeapPtr heap):
-    if heap is not NULL:
-        if heap.values is not NULL:
-            free(heap.values)
-        free(heap)
+    free(heap.values)
+    free(heap)
 

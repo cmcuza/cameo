@@ -1,15 +1,15 @@
-from cython_modules cimport heap, math_utils
-from cython_modules.heap cimport Heap, Node
+from compression.cython cimport heap, math_utils
+from compression.cython.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from cython.parallel cimport prange, parallel
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-cimport cython
-from cython_modules cimport inc_acf
-from cython_modules.inc_acf cimport AcfAgg
+from compression.cython cimport inc_acf
+from compression.cython.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np
+cimport cython
 
 
 
@@ -292,7 +292,7 @@ cdef void look_ahead_reheap(AcfAgg *acf_agg, Heap *acf_errors, unordered_map[int
 @cython.wraparound(False)
 cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops, int nlags, double acf_threshold):
     cdef:
-        int start, end, lag, n = y.shape[0], i = 0
+        int start, end, lag, n = y.shape[0]
         double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
         double * raw_acf = <double *> malloc(nlags * sizeof(double))
         double * error_values = <double *> malloc(n * sizeof(double))
@@ -301,7 +301,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops,
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
         unordered_map[int, int] map_node_to_heap
         Node min_node, left, right
-        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(y.shape[0], dtype=bool)
+        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(x.shape[0], dtype=bool)
 
     inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
     inc_acf.fit(acf_agg, y)  # extract the aggregates
@@ -326,7 +326,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops,
             # inc_acf.get_acf(acf_agg, c_acf)
             # ace = math_utils.mae(raw_acf, c_acf, nlags)
             ace = 0.0
-            n = y.shape[0]
+            n = x.shape[0]
             for lag in range(acf_agg.nlags):
                 n -= 1
                 c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
@@ -343,9 +343,11 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops,
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops)
 
+    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
+    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
@@ -354,9 +356,11 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(double[:] y, int hops,
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking_data_centric(double[:] y, int hops, int nlags, double min_points):
+cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(long [:] x, double[:] y,
+                                                                   int hops, int nlags,
+                                                                   double acf_threshold, int num_threads):
     cdef:
-        int start, end, lag, n = y.shape[0], num_rp = 0
+        int start, end, lag, n = x.shape[0]
         double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
         double * raw_acf = <double *> malloc(nlags * sizeof(double))
         double * error_values = <double *> malloc(n * sizeof(double))
@@ -365,14 +369,14 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking_data_centric(double[:]
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
         unordered_map[int, int] map_node_to_heap
         Node min_node, left, right
-        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(y.shape[0], dtype=bool)
-
+        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(x.shape[0], dtype=bool)
 
     inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
     inc_acf.fit(acf_agg, y)  # extract the aggregates
     inc_acf.get_acf(acf_agg, raw_acf)  # get raw acf
     math_utils.compute_acf_fall(acf_agg, y, raw_acf, error_values) # computing the areas for all triangles
     heap.initialize_from_pointer(acf_errors, map_node_to_heap, error_values, n) # Initialize the heap
+    # logs = list()
 
     while acf_errors.values[0].value < inf:
         min_node = heap.pop(acf_errors, map_node_to_heap) # TODO: make it a reference
@@ -386,72 +390,11 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking_data_centric(double[:]
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
                 inc_acf.update(acf_agg, y, x_a, start + 1)
 
+            # Putting together
+            # inc_acf.get_acf(acf_agg, c_acf)
+            # ace = math_utils.mae(raw_acf, c_acf, nlags)
             ace = 0.0
-            for lag in range(acf_agg.nlags):
-                n -= 1
-                c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
-                              sqrt((n * acf_agg.xss[lag] - acf_agg.xs[lag] * acf_agg.xs[lag]) *
-                                   (n * acf_agg.yss[lag] - acf_agg.ys[lag] * acf_agg.ys[lag]))
-                ace += fabs(raw_acf[lag] - c_acf)
-
-            ace /= acf_agg.nlags
-
-        n = y.shape[0]
-
-        if num_rp > min_points:
-            break
-
-        num_rp += 1
-
-        no_removed_indices[min_node.ts] = False
-        heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
-        look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops)
-
-    heap.release_memory(acf_errors)
-    inc_acf.release_memory(acf_agg)
-    free(raw_acf)
-    free(error_values)
-
-    return no_removed_indices
-
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(double[:] y,
-                                                                   int hops, int nlags,
-                                                                   double acf_threshold, int num_threads):
-    cdef:
-        int start, end, lag, n = y.shape[0]
-        double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
-        double * raw_acf = <double *> malloc(nlags * sizeof(double))
-        double * error_values = <double *> malloc(n * sizeof(double))
-        # double * c_acf = <double *> malloc(nlags * sizeof(double))
-        Heap * acf_errors = <Heap *> malloc(sizeof(Heap))
-        AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
-        unordered_map[int, int] map_node_to_heap
-        Node min_node, left, right
-        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(y.shape[0], dtype=bool)
-
-    inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
-    inc_acf.fit(acf_agg, y)  # extract the aggregates
-    inc_acf.get_acf(acf_agg, raw_acf)  # get raw acf
-    math_utils.compute_acf_fall(acf_agg, y, raw_acf, error_values) # computing the areas for all triangles
-    heap.initialize_from_pointer(acf_errors, map_node_to_heap, error_values, n) # Initialize the heap
-
-    while acf_errors.values[0].value < inf:
-        min_node = heap.pop(acf_errors, map_node_to_heap) # TODO: make it a reference
-        if min_node.value != 0:
-            start = min_node.left
-            end = min_node.right
-            if start + 2 < end:
-                inc_acf.interpolate_update(acf_agg, y, start, end)
-            else:
-                x_a = (y[end]-y[start]) / (end-start) + y[start]
-                inc_acf.update(acf_agg, y, x_a, start + 1)
-
-            ace = 0.0
-            n = y.shape[0]
+            n = x.shape[0]
             for lag in range(acf_agg.nlags):
                 n -= 1
                 c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
@@ -468,9 +411,180 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(double[:] y,
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
 
+    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
+    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_mse(long [:] x, double[:] y,
+                                                                   int hops, int nlags,
+                                                                   double acf_threshold, int num_threads):
+    cdef:
+        int start, end, lag, n = x.shape[0]
+        double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
+        double * raw_acf = <double *> malloc(nlags * sizeof(double))
+        double * error_values = <double *> malloc(n * sizeof(double))
+        # double * c_acf = <double *> malloc(nlags * sizeof(double))
+        Heap * acf_errors = <Heap *> malloc(sizeof(Heap))
+        AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
+        unordered_map[int, int] map_node_to_heap
+        Node min_node, left, right
+        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(x.shape[0], dtype=bool)
+
+    inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
+    inc_acf.fit(acf_agg, y)  # extract the aggregates
+    inc_acf.get_acf(acf_agg, raw_acf)  # get raw acf
+    math_utils.compute_acf_fall(acf_agg, y, raw_acf, error_values) # computing the areas for all triangles
+    heap.initialize_from_pointer(acf_errors, map_node_to_heap, error_values, n) # Initialize the heap
+    # logs = list()
+
+    while acf_errors.values[0].value < inf:
+        min_node = heap.pop(acf_errors, map_node_to_heap) # TODO: make it a reference
+        # logs.append((min_node.value, min_node.ts))
+        if min_node.value != 0:
+            start = min_node.left
+            end = min_node.right
+            if start + 2 < end:
+                inc_acf.interpolate_update(acf_agg, y, start, end)
+            else:
+                x_a = (y[end]-y[start]) / (end-start) + y[start]
+                inc_acf.update(acf_agg, y, x_a, start + 1)
+
+            # Putting together
+            # inc_acf.get_acf(acf_agg, c_acf)
+            # ace = math_utils.mae(raw_acf, c_acf, nlags)
+            ace = 0.0
+            n = x.shape[0]
+            for lag in range(acf_agg.nlags):
+                n -= 1
+                c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
+                              sqrt((n * acf_agg.xss[lag] - acf_agg.xs[lag] * acf_agg.xs[lag]) *
+                                   (n * acf_agg.yss[lag] - acf_agg.ys[lag] * acf_agg.ys[lag]))
+                ace += fabs(raw_acf[lag] - c_acf)
+
+            ace /= acf_agg.nlags
+
+        if ace >= acf_threshold:
+            break
+
+        no_removed_indices[min_node.ts] = False
+        heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
+        parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
+
+    # np.save('./logs/removing_order_cython', logs)
+    heap.release_memory(acf_errors)
+    inc_acf.release_memory(acf_agg)
+    free(raw_acf)
+    # free(c_acf)
+    free(error_values)
+
+    return no_removed_indices
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_compression_centric(long [:] x, double[:] y,
+                                                                                       int hops, int nlags,
+                                                                                       double cr,
+                                                                                       int num_threads):
+    cdef:
+        int start, end, lag, n = x.shape[0], counter=0, N = x.shape[0]
+        double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
+        double * raw_acf = <double *> malloc(nlags * sizeof(double))
+        double * error_values = <double *> malloc(n * sizeof(double))
+        # double * c_acf = <double *> malloc(nlags * sizeof(double))
+        Heap * acf_errors = <Heap *> malloc(sizeof(Heap))
+        AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
+        unordered_map[int, int] map_node_to_heap
+        Node min_node, left, right
+        np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(x.shape[0], dtype=bool)
+
+    inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
+    inc_acf.fit(acf_agg, y)  # extract the aggregates
+    inc_acf.get_acf(acf_agg, raw_acf)  # get raw acf
+    math_utils.compute_acf_fall(acf_agg, y, raw_acf, error_values) # computing the acf for all
+    heap.initialize_from_pointer(acf_errors, map_node_to_heap, error_values, n) # Initialize the heap
+    # logs = list()
+
+    while acf_errors.values[0].value < inf:
+        min_node = heap.pop(acf_errors, map_node_to_heap) # TODO: make it a reference
+        # logs.append((min_node.value, min_node.ts))
+        if min_node.value != 0:
+            start = min_node.left
+            end = min_node.right
+            if start + 2 < end:
+                inc_acf.interpolate_update(acf_agg, y, start, end)
+            else:
+                x_a = (y[end]-y[start]) / (end-start) + y[start]
+                inc_acf.update(acf_agg, y, x_a, start + 1)
+
+            # Putting together
+            # inc_acf.get_acf(acf_agg, c_acf)
+            # ace = math_utils.mae(raw_acf, c_acf, nlags)
+            ace = 0.0
+
+            n = x.shape[0]
+            # for lag in range(acf_agg.nlags):
+            #     n -= 1
+            #     c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
+            #                   sqrt((n * acf_agg.xss[lag] - acf_agg.xs[lag] * acf_agg.xs[lag]) *
+            #                        (n * acf_agg.yss[lag] - acf_agg.ys[lag] * acf_agg.ys[lag]))
+            #     ace += fabs(raw_acf[lag] - c_acf)
+            #
+            # ace /= acf_agg.nlags
+
+        counter += 1
+
+        if N/(N-counter) >= cr:
+            break
+
+        no_removed_indices[min_node.ts] = False
+        heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
+        parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
+
+    # np.save('./logs/removing_order_cython', logs)
+    heap.release_memory(acf_errors)
+    inc_acf.release_memory(acf_agg)
+    free(raw_acf)
+    # free(c_acf)
+    free(error_values)
+
+    return no_removed_indices
+
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.ndarray[np.float, ndim=1] get_initial_distribution(double[:] y, int nlags):
+    cdef:
+        int n = y.shape[0], i
+        double * error_values = <double *> malloc(n * sizeof(double))
+        double * raw_acf = <double *> malloc(nlags * sizeof(double))
+        AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
+        Node min_node, left, right
+
+    initial_distribution = np.ones(y.shape[0], dtype=np.float)
+    inc_acf.initialize(acf_agg, nlags)  # initialize the aggregates
+    inc_acf.fit(acf_agg, y)  # extract the aggregates
+    inc_acf.get_acf(acf_agg, raw_acf)  # get raw acf
+    math_utils.compute_acf_fall(acf_agg, y, raw_acf, error_values)  # computing the acf for all
+
+    for i in range(n):
+        initial_distribution[i] = error_values[i]
+
+    inc_acf.release_memory(acf_agg)
+
+    free(raw_acf)
+    # free(c_acf)
+    free(error_values)
+
+    return initial_distribution

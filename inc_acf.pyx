@@ -2,7 +2,7 @@ import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-from cython_modules cimport math_utils
+from compression.cython cimport math_utils
 cimport cython
 
 
@@ -289,15 +289,9 @@ cdef double look_ahead_interpolated_impact(AcfPtr model, double[:] x, double *ra
 
 
 cdef void release_memory(AcfPtr model):
-    if model is not NULL:
-        if model.sxy is not NULL:
-            free(model.sxy)
-        if model.ys is not NULL:
-            free(model.ys)
-        if model.xs is not NULL:
-            free(model.xs)
-        if model.xss is not NULL:
-            free(model.xss)
-        if model.yss is not NULL:
-            free(model.yss)
-        free(model)
+    free(model.sxy)
+    free(model.ys)
+    free(model.xs)
+    free(model.xss)
+    free(model.yss)
+    free(model)
