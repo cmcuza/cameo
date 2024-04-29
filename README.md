@@ -1,5 +1,10 @@
 # CAMEO: Autocorrelation-preserving Line Simplification for Lossy Time Series Compression 
 
+CAMEO is a lossy time series compression algorithm capable of 
+preserving the AutoCorrelation Function (ACF) of the decompressed data within an error bound of the original ACF.
+CAMEO efficiently re-computes the ACF by keeping basic aggregates. CAMEO is implemented in Cython to increase its efficiency, avoid python GIL constraints, and take full advantage
+of multi-threading.  
+
 ## Installation
 
 Clone the repository:
