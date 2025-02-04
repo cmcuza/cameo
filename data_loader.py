@@ -71,13 +71,10 @@ class DataFactory:
     def __init__(self, split=0.8):
         self.split = split
         self.loaders = {
-            'refit': RefitLoader,
             'hepc': HepcLoader,
             'min_temp': MinTemp,
-            'pressure': PressureLoader,
             'aus_electrical_demand': AusElectricalDemand,
             'uk_electrical_demand': UkElectricalDemand,
-            'wind4seconds': Wind4Seconds,
             'solar4seconds': Solar4Seconds,
             'pedestrian': PedestrianLoader,
             'biotemp': IRBioTemp,
@@ -106,17 +103,6 @@ class DataFactory:
         return loader
 
 
-class RefitLoader(Loader):
-    file_name = 'refit_1.csv'
-    name = 'refit'
-
-    def load(self, file_path):
-        self.data = pd.read_csv(path_join(file_path, self.file_name),
-                                usecols=['Time', 'Aggregate'],
-                                parse_dates=['Time'],
-                                index_col=['Time']).sort_index()
-
-
 class HepcLoader(Loader):
     file_name = 'hepc.csv'
     freq = '15T'
@@ -133,7 +119,7 @@ class HepcLoader(Loader):
 
 
 class MinTemp(Loader):
-    file_name = 'daily-min-temperatures.csv'
+    file_name = 'mintemp.csv'
     freq = 'D'
     fs = 1. / (24*3600)
     name = 'min_temp'
@@ -167,7 +153,7 @@ class PedestrianLoader(Loader):
 
 
 class UkElectricalDemand(Loader):
-    file_name = 'demanddata_2021.csv'
+    file_name = 'ukelecdem.csv'
     freq = '30T'
     fs = 2. / 3600.
     name = 'uk_electrical_demand'
@@ -182,83 +168,19 @@ class UkElectricalDemand(Loader):
         self.data = self.data[['ND']].astype(float)
 
 
-
-class PressureLoader(Loader):
-    file_name = 'Pressure.csv.gz'
-    freq = '1T'
-    name = 'pressure'
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'rb') as f:
-            self.data = pd.read_csv(f, header=None)
-            ts = pd.date_range(start='08-2017', end='06-2021', periods=len(self.data))
-            self.data.set_index(ts, inplace=True)
-            self.data.drop([0], axis=1, inplace=True)
-            self.data.rename({1: 'y'}, axis=1, inplace=True)
-
-
-class MoteStrain(Loader):
-    file_name = 'MoteStrain.csv.gz'
-    freq = '1T'
-    name = 'mote_strain'
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'rb') as f:
-            self.data = pd.read_csv(f, header=None)
-            ts = pd.date_range(start='08-2017', end='06-2021', periods=len(self.data))
-            self.data.set_index(ts, inplace=True)
-            self.data.drop([0], axis=1, inplace=True)
-            self.data.rename({1: 'y'}, axis=1, inplace=True)
-
-
-class Wind4Seconds(Loader):
-    file_name = 'wind_4_seconds_dataset.zip'
-    freq = '4s'
-    name = 'wind4seconds'
-    aggregation = 450
-    fs = 2. / 3600.
-
-    def load(self, file_path):
-        self.data = pd.DataFrame()
-
-        with zipfile.ZipFile(path_join(file_path, self.file_name)) as _zip:
-            for filename in _zip.namelist():
-                with _zip.open(filename) as f:
-                    for i, line in enumerate(f):
-                        if i == 15:
-                            line = str(line)
-                            _, timestamp, points = line.split(':')
-                            points = points.split(',')
-                            points[-1] = points[-1][:-5]
-                            self.data['y'] = np.asarray(points, dtype=float)
-                            ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
-                            self.data.set_index(ts, inplace=True)
-
-
 class Solar4Seconds(Loader):
-    file_name = 'solar_4_seconds_dataset.zip'
-    freq = '4s'
+    file_name = 'solarpower.zip'
+    freq = '30s'
     name = 'solar4seconds'
     aggregation = 120
     seasonality = 24
     fs = 2. / 3600.
 
     def load(self, file_path):
-        with zipfile.ZipFile(path_join(file_path, self.file_name)) as _zip:
-            for filename in _zip.namelist():
-                with _zip.open(filename) as f:
-                    for i, line in enumerate(f):
-                        if i == 15:
-                            line = str(line)
-                            _, timestamp, points = line.split(':')
-                            points = points.split(',')
-                            points[-1] = points[-1][:-5]
-                            self.data['y'] = np.asarray(points, dtype=float)
-                            ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
-                            self.data.set_index(ts, inplace=True)
-
-        self.data = self.data.resample('30s').mean()
-        print(self.data.shape)
+        self.data = pd.read_csv(path_join(file_path, self.file_name))
+        timestamp = '01/01/2019'
+        ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
+        self.data.set_index(ts, inplace=True)
 
     def prepare_for_parquet(self):
         self.data.reset_index(inplace=True)
@@ -266,7 +188,7 @@ class Solar4Seconds(Loader):
 
 
 class AusElectricalDemand(Loader):
-    file_name = 'australian_electricity_demand_dataset.zip'
+    file_name = 'auselecdem.csv'
     freq = '30T'
     fs = 2. / 3600.
     name = 'aus_electrical_demand'
@@ -274,18 +196,10 @@ class AusElectricalDemand(Loader):
     aggregation = 48
 
     def load(self, file_path):
-        with zipfile.ZipFile(path_join(file_path, self.file_name)) as _zip:
-            for filename in _zip.namelist():
-                with _zip.open(filename) as f:
-                    for i, line in enumerate(f):
-                        if i == 15:
-                            line = str(line)
-                            _, _, timestamp, points = line.split(':')
-                            points = points.split(',')
-                            points[-1] = points[-1][:-5]
-                            self.data['y'] = np.asarray(points, dtype=float)
-                            ts = pd.date_range(start=timestamp, freq=self.freq, periods=len(self.data), tz=None).tz_localize(None)
-                            self.data.set_index(ts, inplace=True)
+        self.data = pd.read_csv(path_join(file_path, self.file_name))
+        timestamp = '01/01/2002'
+        ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
+        self.data.set_index(ts, inplace=True)
 
     def rename_to_prophet(self):
         # .dt.tz_localize(None)
@@ -314,58 +228,8 @@ class AusElectricalDemand(Loader):
         self.data.rename({'index': 'datetime'}, axis=1, inplace=True)
 
 
-
-class CricketLoader(Loader):
-    file_name = 'Cricket.csv.gz'
-    freq = '150s'
-    fs = 2. / 3600.
-    name = 'cricket'
-    seasonality = 48
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'r') as _gzip:
-            self.data = pd.read_csv(_gzip, index_col=[0], names=['y'])
-
-
-class WaferLoader(Loader):
-    file_name = 'Wafer.csv.gz'
-    freq = '150s'
-    fs = 2. / 3600.
-    name = 'wafer'
-    seasonality = 48
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'r') as _gzip:
-            self.data = pd.read_csv(_gzip, index_col=[0], names=['y'])
-
-
-class WindDirLoader(Loader):
-    file_name = 'WindDirection.csv.gz'
-    freq = '150s'
-    fs = 2. / 3600.
-    name = 'winddir'
-    seasonality = 48
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'r') as _gzip:
-            self.data = pd.read_csv(_gzip, index_col=[0], names=['y'])
-
-
-class WindSpeedLoader(Loader):
-    file_name = 'WindSpeed.csv.gz'
-    freq = '150s'
-    fs = 2. / 3600.
-    name = 'windspeed'
-    seasonality = 48
-
-    def load(self, file_path):
-        with gzip.open(path_join(file_path, self.file_name), 'r') as _gzip:
-            self.data = pd.read_csv(_gzip, index_col=[0], names=['y'])
-
-
 class IRBioTemp(Loader):
-    file_name = 'NEON_temp-bio'
-    matching_pattern = 'NEON.D03.DSNY.DP1.00005.001.000.010.001.IRBT_1_minute'
+    file_name = 'irbiotemp.csv'
     freq = '1T'
     fs = 1 / 60.
     name = 'biotemp'
@@ -373,17 +237,7 @@ class IRBioTemp(Loader):
     aggregation = 60
 
     def load(self, file_path):
-        self.data = pd.DataFrame()
-        for root, dirs, files in os.walk(os.path.join(file_path, self.file_name)):
-            for file in files:
-                if file.find(self.matching_pattern) != -1:
-                    df = pd.read_csv(os.path.join(root, file)).bioTempMean.to_frame()
-                    if (df.bioTempMean.isnull().sum() != 0) or (df.bioTempMean.isna().sum() != 0):
-                        continue
-
-                    self.data = pd.concat([self.data, df])
-
-        self.data.rename({'bioTempMean': 'y'}, axis=1, inplace=True)
+        self.data = pd.read_csv(path_join(file_path, self.file_name))
         timestamp = '01/01/2016'
         ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
         self.data.set_index(ts, inplace=True)
@@ -394,8 +248,7 @@ class IRBioTemp(Loader):
 
 
 class HumidityLoader(Loader):
-    file_name = 'NEON_rel-humidity'
-    matching_pattern = 'NEON.D03.DSNY.DP1.00098.001.000.040.001.RH_1min'
+    file_name = 'humidity.csv'
     freq = '1T'
     fs = 1 / 60.
     name = 'humidity'
@@ -403,20 +256,7 @@ class HumidityLoader(Loader):
     aggregation = 60
 
     def load(self, file_path):
-        self.data = pd.DataFrame()
-        for root, dirs, files in os.walk(os.path.join(file_path, self.file_name)):
-            for file in files:
-                if file.find(self.matching_pattern) != -1:
-                    df = pd.read_csv(os.path.join(root, file)).RHMean.to_frame()
-                    if (df.RHMean.isnull().sum() != 0) or (df.RHMean.isna().sum() != 0):
-                        if df.RHMean.isnull().sum() > 30:
-                            continue
-                        else:
-                            df = df.interpolate(method='linear')
-
-                    self.data = pd.concat([self.data, df])
-
-        self.data.rename({'RHMean': 'y'}, axis=1, inplace=True)
+        self.data = pd.read_csv(path_join(file_path, self.file_name))
         timestamp = '01/01/2016'
         ts = pd.date_range(start=pd.to_datetime(timestamp), freq=self.freq, periods=len(self.data))
         self.data.set_index(ts, inplace=True)
@@ -473,4 +313,3 @@ class UCRLoader(Loader):
 
             self.data = new_tsf.sort_values('label').reset_index(drop=True)
             self.data.to_parquet(compiled_ucr_path)
-
