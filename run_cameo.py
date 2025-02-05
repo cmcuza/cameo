@@ -1,6 +1,5 @@
 import sys
-import numpy as np
-from cameo.cameo import simplify_by_blocking
+from compressors.cameo import simplify_by_blocking
 from data_loader import *
 
 

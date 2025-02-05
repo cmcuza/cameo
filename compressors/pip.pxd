@@ -1,0 +1,1 @@
+cpdef simplify_by_pip(double[:] y, int nlags, double acf_threshold)

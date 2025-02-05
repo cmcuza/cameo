@@ -25,8 +25,7 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 
 Install the required Python package:
 ```bash
-pip install Cython
-pip install pandas
+pip install -r requirements.txt
 ```
 
 ## Compiling Cython Code
@@ -42,7 +41,7 @@ python setup.py build_ext --inplace
 To run a simple example run the main script. The main script expects a dataset name and the acf error-bound, for example:
 
 ```bash
-python main hepc 0.001
+python run_cameo.py hepc 0.001
 ```
 
 

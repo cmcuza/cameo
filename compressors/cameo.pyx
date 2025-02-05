@@ -322,9 +322,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(long [:] x, double[:] 
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
                 inc_acf.update(acf_agg, y, x_a, start + 1)
 
-            # Putting together
-            # inc_acf.get_acf(acf_agg, c_acf)
-            # ace = math_utils.mae(raw_acf, c_acf, nlags)
             ace = 0.0
             n = x.shape[0]
             for lag in range(acf_agg.nlags):
@@ -343,11 +340,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_blocking(long [:] x, double[:] 
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops)
 
-    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
-    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
@@ -364,7 +359,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(long [:] x, d
         double ace = 0.0, x_a, right_area, left_area, c_acf, inf = INFINITY
         double * raw_acf = <double *> malloc(nlags * sizeof(double))
         double * error_values = <double *> malloc(n * sizeof(double))
-        # double * c_acf = <double *> malloc(nlags * sizeof(double))
         Heap * acf_errors = <Heap *> malloc(sizeof(Heap))
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
         unordered_map[int, int] map_node_to_heap
@@ -390,9 +384,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(long [:] x, d
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
                 inc_acf.update(acf_agg, y, x_a, start + 1)
 
-            # Putting together
-            # inc_acf.get_acf(acf_agg, c_acf)
-            # ace = math_utils.mae(raw_acf, c_acf, nlags)
             ace = 0.0
             n = x.shape[0]
             for lag in range(acf_agg.nlags):
@@ -411,11 +402,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking(long [:] x, d
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
 
-    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
-    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
@@ -458,9 +447,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_mse(long [:] 
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
                 inc_acf.update(acf_agg, y, x_a, start + 1)
 
-            # Putting together
-            # inc_acf.get_acf(acf_agg, c_acf)
-            # ace = math_utils.mae(raw_acf, c_acf, nlags)
             ace = 0.0
             n = x.shape[0]
             for lag in range(acf_agg.nlags):
@@ -479,11 +465,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_mse(long [:] 
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
 
-    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
-    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
@@ -533,14 +517,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_compression_c
             ace = 0.0
 
             n = x.shape[0]
-            # for lag in range(acf_agg.nlags):
-            #     n -= 1
-            #     c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
-            #                   sqrt((n * acf_agg.xss[lag] - acf_agg.xs[lag] * acf_agg.xs[lag]) *
-            #                        (n * acf_agg.yss[lag] - acf_agg.ys[lag] * acf_agg.ys[lag]))
-            #     ace += fabs(raw_acf[lag] - c_acf)
-            #
-            # ace /= acf_agg.nlags
 
         counter += 1
 
@@ -551,11 +527,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] parallel_simplify_by_blocking_compression_c
         heap.update_left_right(acf_errors, map_node_to_heap, min_node.left, min_node.right)
         parallel_look_ahead_reheap(acf_agg, acf_errors, map_node_to_heap, y, raw_acf, min_node, hops, num_threads)
 
-    # np.save('./logs/removing_order_cython', logs)
     heap.release_memory(acf_errors)
     inc_acf.release_memory(acf_agg)
     free(raw_acf)
-    # free(c_acf)
     free(error_values)
 
     return no_removed_indices
@@ -584,7 +558,6 @@ cpdef np.ndarray[np.float, ndim=1] get_initial_distribution(double[:] y, int nla
     inc_acf.release_memory(acf_agg)
 
     free(raw_acf)
-    # free(c_acf)
     free(error_values)
 
     return initial_distribution

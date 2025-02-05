@@ -14,40 +14,58 @@ else:
 
 extensions = [
     Extension(
-        name="cameo.heap",
-        sources=["cameo/heap.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="cameo.cameo",
-        sources=["cameo/cameo.pyx"],
+        name="compressors.cameo",
+        sources=["compressors/cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="cameo.agg_cameo",
-        sources=["cameo/agg_cameo.pyx"],
+        name="compressors.heap",
+        sources=["compressors/heap.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compressors.pip",
+        sources=["compressors/pip.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compressors.pip_heap",
+        sources=["compressors/pip_heap.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compressors.turning_point",
+        sources=["compressors/turning_point.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compressors.agg_cameo",
+        sources=["compressors/agg_cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="cameo.inc_acf",
-        sources=["cameo/inc_acf.pyx"],
+        name="compressors.inc_acf",
+        sources=["compressors/inc_acf.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="cameo.inc_acf_agg",
-        sources=["cameo/inc_acf_agg.pyx"],
+        name="compressors.inc_acf_agg",
+        sources=["compressors/inc_acf_agg.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="cameo.math_utils",
-        sources=["cameo/math_utils.pyx"],
+        name="compressors.math_utils",
+        sources=["compressors/math_utils.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
@@ -57,7 +75,7 @@ extensions = [
 setup(
     name='cameo',
     version="0.1",
-    packages=["cameo"],
+    packages=["compressors"],
     # extra_compile_args=["-g"],
     ext_modules=cythonize(extensions,
                           show_all_warnings=True,

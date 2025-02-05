@@ -1,10 +1,11 @@
 import os
 import shutil
 import pandas as pd
-import gzip
-import zipfile
+from distutils.util import strtobool
 import numpy as np
+from datetime import datetime
 from os.path import join as path_join
+
 
 class Loader:
     data: pd.DataFrame = None
@@ -313,3 +314,189 @@ class UCRLoader(Loader):
 
             self.data = new_tsf.sort_values('label').reset_index(drop=True)
             self.data.to_parquet(compiled_ucr_path)
+
+
+class TSFReader:
+    raw_root_file = os.path.join('data', 'raw')
+    compressed_root_file = os.path.join('data', 'compressed')
+
+    def convert_tsf_to_dataframe(self, full_file_path_and_name, replace_missing_vals_with="NaN", value_column_name="series_value"):
+        col_names = []
+        col_types = []
+        all_data = {}
+        line_count = 0
+        frequency = None
+        forecast_horizon = None
+        contain_missing_values = None
+        contain_equal_length = None
+        found_data_tag = False
+        found_data_section = False
+        started_reading_data_section = False
+
+        with open(full_file_path_and_name, "r", encoding="cp1252") as file:
+            for line in file:
+                # Strip white space from start/end of line
+                line = line.strip()
+
+                if line:
+                    if line.startswith("@"):  # Read meta-data
+                        if not line.startswith("@data"):
+                            line_content = line.split(" ")
+                            if line.startswith("@attribute"):
+                                if (
+                                        len(line_content) != 3
+                                ):  # Attributes have both name and type
+                                    raise Exception("Invalid meta-data specification.")
+
+                                col_names.append(line_content[1])
+                                col_types.append(line_content[2])
+                            else:
+                                if (
+                                        len(line_content) != 2
+                                ):  # Other meta-data have only values
+                                    raise Exception("Invalid meta-data specification.")
+
+                                if line.startswith("@frequency"):
+                                    frequency = line_content[1]
+                                elif line.startswith("@horizon"):
+                                    forecast_horizon = int(line_content[1])
+                                elif line.startswith("@missing"):
+                                    contain_missing_values = bool(
+                                        strtobool(line_content[1])
+                                    )
+                                elif line.startswith("@equallength"):
+                                    contain_equal_length = bool(strtobool(line_content[1]))
+
+                        else:
+                            if len(col_names) == 0:
+                                raise Exception(
+                                    "Missing attribute section. Attribute section must come before data."
+                                )
+
+                            found_data_tag = True
+                    elif not line.startswith("#"):
+                        if len(col_names) == 0:
+                            raise Exception(
+                                "Missing attribute section. Attribute section must come before data."
+                            )
+                        elif not found_data_tag:
+                            raise Exception("Missing @data tag.")
+                        else:
+                            if not started_reading_data_section:
+                                started_reading_data_section = True
+                                found_data_section = True
+                                all_series = []
+
+                                for col in col_names:
+                                    all_data[col] = []
+
+                            full_info = line.split(":")
+
+                            if len(full_info) != (len(col_names) + 1):
+                                raise Exception("Missing attributes/values in series.")
+
+                            series = full_info[len(full_info) - 1]
+                            series = series.split(",")
+
+                            if len(series) == 0:
+                                raise Exception(
+                                    "A given series should contains a set of comma separated numeric values. "
+                                    "At least one numeric value should be there in a series. "
+                                    "Missing values should be indicated with ? symbol"
+                                )
+
+                            numeric_series = []
+
+                            for val in series:
+                                if val == "?":
+                                    numeric_series.append(replace_missing_vals_with)
+                                else:
+                                    numeric_series.append(float(val))
+
+                            if numeric_series.count(replace_missing_vals_with) == len(
+                                    numeric_series
+                            ):
+                                raise Exception(
+                                    "All series values are missing. A given series should contains a set of comma "
+                                    "separated numeric values. At least one numeric value should be there in a series."
+                                )
+
+                            all_series.append(np.asarray(numeric_series))
+
+                            for i in range(len(col_names)):
+                                att_val = None
+                                if col_types[i] == "numeric":
+                                    att_val = int(full_info[i])
+                                elif col_types[i] == "string":
+                                    att_val = str(full_info[i])
+                                elif col_types[i] == "date":
+                                    att_val = datetime.strptime(
+                                        full_info[i], "%Y-%m-%d %H-%M-%S"
+                                    )
+                                else:
+                                    raise Exception(
+                                        "Invalid attribute type."
+                                    )  # Currently, the code supports only numeric, string
+                                    # and date types. Extend this as required.
+
+                                if att_val is None:
+                                    raise Exception("Invalid attribute value.")
+                                else:
+                                    all_data[col_names[i]].append(att_val)
+
+                    line_count = line_count + 1
+
+            if line_count == 0:
+                raise Exception("Empty file.")
+            if len(col_names) == 0:
+                raise Exception("Missing attribute section.")
+            if not found_data_section:
+                raise Exception("Missing series information under data section.")
+
+            all_data[value_column_name] = all_series
+            loaded_data = pd.DataFrame(all_data)
+
+            return (
+                loaded_data,
+                frequency,
+                forecast_horizon,
+                contain_missing_values,
+                contain_equal_length,
+            )
+
+    def read_raw_tsf(self, file_name):
+        full_file_path_and_name = os.path.join(self.raw_root_file, file_name)
+        return self.convert_tsf_to_dataframe(full_file_path_and_name)
+
+    def convert_dataframe_to_tsf(self, root_path, file_name, data_frame):
+        full_file_path_and_name = os.path.join(self.raw_root_file, file_name)
+        new_file_path_name = os.path.join(self.compressed_root_file, root_path, file_name)
+        new_tsf = ""
+        data_flag = False
+        i = 0
+        np.set_printoptions(suppress=True)
+        with open(full_file_path_and_name, "r", encoding="cp1252") as file:
+            for line in file:
+                # Strip white space from start/end of line
+                line = line.strip()
+
+                if data_flag:
+                    full_info = line.split(":")
+                    new_series = ''
+                    for element in data_frame.series_value[i]:
+                        if file_name.find('pedestrian') != -1:
+                            new_series += str(round(element)) + ','
+                        else:
+                            new_series += '{:10.5f}'.format(element) + ','
+                    new_tsf += ':'.join(full_info[:-1]) + ':' + new_series[:-1] + '\n'
+                    i += 1
+                else:
+                    if line.startswith("@data"):
+                        data_flag = True
+
+                    new_tsf += line + '\n'
+
+        os.makedirs(os.path.join(self.compressed_root_file, root_path), exist_ok=True)
+        with open(new_file_path_name, "w", encoding="cp1252") as file:
+            file.write(new_tsf)
+
