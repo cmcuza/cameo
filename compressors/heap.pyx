@@ -59,6 +59,28 @@ cdef void initialize_from_pointer(HeapPtr heap, MapPtr map_node_to_heap, double 
     for i in range(heap.m_size):
         map_node_to_heap[heap.values[i].ts] = i
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef void initialize_for_turning_point(HeapPtr heap, MapPtr map_node_to_heap, double *import_tp, int *selected_tp, int n):
+    cdef int i
+    heap.c_size = n
+    heap.m_size = selected_tp[n-1]+1
+    heap.values = <NodePtr> malloc(heap.c_size * sizeof(Node))
+    map_node_to_heap.reserve(heap.c_size)
+
+    heap.values[0] = Node(import_tp[0], selected_tp[0], -1, selected_tp[1])
+
+    for i in range(1, heap.c_size-1):
+        heap.values[i] = Node(import_tp[i], selected_tp[i], selected_tp[i-1], selected_tp[i+1])
+
+    heap.values[n-1] = Node(import_tp[n-1], selected_tp[n-1], selected_tp[n-2], selected_tp[n-1]+1)
+
+    heapify(heap)
+
+    for i in range(heap.c_size):
+        map_node_to_heap[heap.values[i].ts] = i
+
+
 cdef inline Node top(HeapPtr heap):
     return heap.values[0]
 

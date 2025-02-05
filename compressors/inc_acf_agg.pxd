@@ -1,4 +1,4 @@
-from cameo.inc_acf cimport AcfPtr
+from compressors.inc_acf cimport AcfPtr
 
 cdef void fit_mean(AcfPtr model, double[:] x, double [:] aggregates, int kappa)
 

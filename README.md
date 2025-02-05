@@ -36,7 +36,7 @@ Compile the Cython modules:
 python setup.py build_ext --inplace
 ```
 
-### Running the Application
+### Running the CAMEO
 
 To run a simple example run the main script. The main script expects a dataset name and the acf error-bound, for example:
 
@@ -44,7 +44,25 @@ To run a simple example run the main script. The main script expects a dataset n
 python run_cameo.py hepc 0.001
 ```
 
+### Running other Compressors
 
+To run any of the line-simplification methods implemented in `./compressors/` you can do the following: 
+
+```python
+import compressors.visvalingam_whyat as vw
+from data_loader import DataFactory
+import numpy as np
+
+factory = DataFactory()
+data_loader = factory.load_data('hepc', 'data')
+nlags = data_loader.seasonality
+y = np.squeeze(data_loader.data.values)
+x = np.arange(y.shape[0])
+error_bound = 0.01
+compressed_values = vw.simplify(x, y, nlags, error_bound)
+```
+
+The same procedure applies for `turning points` and `perceptual important points`. 
 
 
 

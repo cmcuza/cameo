@@ -1,4 +1,3 @@
-from multiprocessing import Pool
 from forecasting.forecasting_functions import process_data_item_forecasting
 
 forecasting_model = 'lstm'

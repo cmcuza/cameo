@@ -1,10 +1,10 @@
-from compression.cython cimport heap
-from compression.cython.heap cimport Heap, Node
+from compressors cimport heap
+from compressors.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-from compression.cython cimport inc_acf
-from compression.cython.inc_acf cimport AcfAgg
+from compressors cimport inc_acf
+from compressors.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np

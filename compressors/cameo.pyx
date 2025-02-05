@@ -1,11 +1,11 @@
-from cameo cimport heap, math_utils
-from cameo.heap cimport Heap, Node
+from compressors cimport heap, math_utils
+from compressors.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from cython.parallel cimport prange, parallel
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
-from cameo cimport inc_acf
-from cameo.inc_acf cimport AcfAgg
+from compressors cimport inc_acf
+from compressors.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np

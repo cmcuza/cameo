@@ -1,4 +1,4 @@
-from cameo.inc_acf cimport AcfAgg
+from compressors.inc_acf cimport AcfAgg
 
 cdef double dot_product(double[:] x, double[:] y)
 

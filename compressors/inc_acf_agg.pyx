@@ -1,8 +1,8 @@
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
-from cameo cimport math_utils
-from cameo.inc_acf cimport AcfPtr
+from compressors cimport math_utils
+from compressors.inc_acf cimport AcfPtr
 from numpy.math cimport INFINITY
 cimport cython
 

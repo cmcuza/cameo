@@ -2,7 +2,7 @@ cimport cython
 from libc.math cimport fabs, sqrt
 from cython.parallel cimport prange, parallel
 from libc.stdlib cimport malloc, free, abort
-from cameo.inc_acf cimport AcfAgg
+from compressors.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 
 

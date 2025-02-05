@@ -1,7 +1,7 @@
-from compression.cython.pip_heap cimport PIPHeap, PIPNode
-from compression.cython.inc_acf cimport AcfAgg
-from compression.cython cimport pip_heap
-from compression.cython cimport inc_acf
+from compressors.pip_heap cimport PIPHeap, PIPNode
+from compressors.inc_acf cimport AcfAgg
+from compressors cimport pip_heap
+from compressors cimport inc_acf
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrt, fabs
 from numpy.math cimport INFINITY

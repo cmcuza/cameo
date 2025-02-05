@@ -45,7 +45,7 @@ cdef double[:] triangle_areas_from_array(long[:] x, double[:] y):
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_areas_and_inc_acf(long [:] x, double[:] y, int nlags, double acf_threshold):
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify(long [:] x, double[:] y, int nlags, double acf_threshold):
     cdef:
         int start, end
         double ace = 0.0, x_a, right_area, left_area, inf = INFINITY
@@ -118,7 +118,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_areas_and_inc_acf(long [:] x, d
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_areas_and_acf_agg(long [:] x, double[:] y,
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_acf_agg(long [:] x, double[:] y,
                                                                    int nlags, int kappa, double acf_threshold):
     cdef:
         int start, end
