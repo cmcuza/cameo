@@ -12,6 +12,8 @@ if __name__ == '__main__':
     y = np.squeeze(data_loader.data.values)
     x = np.arange(y.shape[0])
     hops = np.log(y.shape[0])*10
-    remaining_points = simplify_by_blocking(x, y, hops, acf, acf_threshold)
-    print('Compression ratio:', round(y.shape[0]/np.sum(remaining_points), 2))
+    cameo_out = simplify_by_blocking(x, y, hops, acf, acf_threshold)
+    decompressed_points = np.interp(np.arange(y.shape[0]), x[cameo_out], y[cameo_out])
+    print('Compression ratio:', round(y.shape[0]/np.sum(cameo_out), 2))
+    print('Decompression MSE:', np.mean((decompressed_points-y)**2))
 

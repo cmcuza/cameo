@@ -1,6 +1,4 @@
-from compressors cimport heap, math_utils
-from compressors.heap cimport Heap, Node
-from compressors cimport inc_acf
+from compressors.heap cimport Node
 from compressors.inc_acf cimport AcfAgg
 import numpy as np
 cimport numpy as np
@@ -23,4 +21,4 @@ cdef int extract_1st_tps_importance(AcfAgg *model, double[:] x, double * raw_acf
                                      double acf_error, int * selected_tp,
                                      double * importance_tp, np.ndarray[np.uint8_t, ndim=1] extract_1st_tps_importance)
 
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_turning_point(double[:] y, int nlags, double acf_threshold)
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify(double[:] y, int nlags, double acf_threshold)

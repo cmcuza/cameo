@@ -3,7 +3,8 @@
 *.html
 .idea
 /build/
-/cameo/cameo/
+./data/UCR_data/*
+./data/compressed/*
 __pycache__
-cameo/__pycache__
+compressors/__pycache__
 *.idea

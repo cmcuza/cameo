@@ -459,32 +459,4 @@ def test_matrix_profile_cython():
 
 
 if __name__ == "__main__":
-    # segment1 = Segment()
-    # segment1.add_point(Point(0, 0.4))
-    # segment1.add_point(Point(10, 1.8))
-    # m1 = Point(10, 1.8).slope(Point(0, 0.4))
-    # x1 = np.arange(11)
-    # y1 = m1*x1 + 0.4
-    # mean1 = np.mean(y1)
-    # std1 = np.std(y1)
-    # print(mean1, segment1.mean)
-    # print(std1, segment1.std)
-    # segment2 = Segment()
-    # segment2.add_point(Point(0, 1.8))
-    # segment2.add_point(Point(15, 4.8))
-    # m2 = Point(15, 4.8).slope(Point(0, 1.8))
-    # x2 = np.arange(0, 16)
-    # y2 = m2 * x2 + 1.8
-    # mean2 = np.mean(y2)
-    # std2 = np.std(y2)
-    # print(mean2, segment2.mean)
-    # print(std1, segment1.std)
-    #
-    # print(np.mean(np.concatenate([y1, y2])))
-    # print((mean1*11+mean2*16)/27)
-    #
-    # print('Loaded')
-    # test_line_euclidean_distance()
     test_subseq_euclidean_distance()
-    # test_matrix_profile()
-    # test_matrix_profile_cython()

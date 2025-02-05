@@ -120,7 +120,7 @@ cdef int extract_1st_tps_importance(AcfAgg *model, double[:] x, double * raw_acf
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_turning_point(double[:] y, int nlags, double acf_threshold):
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify(double[:] y, int nlags, double acf_threshold):
     cdef:
         int i, tp_count, lag, n = y.shape[0], left_node_index, right_node_index, start, end
         double ace, x_a, c_acf, inf = INFINITY, node_importance

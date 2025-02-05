@@ -8,7 +8,7 @@ from scipy import stats
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from data_loader import TSFReader
-os.environ['R_HOME'] = 'xxxxxx' # Set the r_home
+os.environ['R_HOME'] = 'C:/Program Files/R/R-4.3.0'
 import rpy2.robjects as robjects
 
 time_map = {'hourly': 'h', 'half_hourly': '30T'}
@@ -303,14 +303,6 @@ def get_forecasting(data_name, file_path, file_name, forecasting_model, load_raw
         get_stlf_forecasting(data_name, file_path, file_name)
     elif forecasting_model == 'stlf_arima':
         get_stlf_arima_forecasting(data_name, file_path, file_name)
-    elif forecasting_model == 'theta':
-        get_theta_forecasting(data_name, file_path, file_name)
-    elif forecasting_model == 'tbats':
-        get_tbats_forecasting(data_name, file_path, file_name)
-    elif forecasting_model == 'ets':
-        get_ets_forecasting(data_name, file_path, file_name)
-    elif forecasting_model == 'prophet':
-        get_prophet_forecasting(data_name, file_path, file_name)
     elif forecasting_model == 'lstm':
         get_lstm_forecasting(data_name, file_path, file_name)
     else:
@@ -334,8 +326,6 @@ def process_data_item_forecasting(data_item):
         get_tbats_forecasting(data_name, './data/raw', file_name)
     elif forecasting_model == 'stlf':
         get_stlf_forecasting(data_name, './data/raw', file_name)
-    elif forecasting_model == 'prophet':
-        get_prophet_forecasting(data_name, './data/raw', file_name)
     elif forecasting_model == 'lstm':
         get_lstm_forecasting(data_name, './data/raw', file_name)
     elif forecasting_model == 'tcn':

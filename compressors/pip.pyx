@@ -13,7 +13,7 @@ cimport cython
 @cython.cdivision(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef simplify_by_pip(double[:] y, int nlags, double acf_threshold):
+cpdef simplify(double[:] y, int nlags, double acf_threshold):
     cdef:
         int N = y.shape[0], i, start, left, order, n = y.shape[0]
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))

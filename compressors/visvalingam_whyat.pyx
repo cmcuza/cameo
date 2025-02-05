@@ -1,10 +1,10 @@
-cimport heap, math_utils
-from heap cimport Heap, Node
+from compressors cimport heap, math_utils
+from compressors.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from libc.stdlib cimport malloc, free
 cimport cython
-cimport inc_acf, inc_acf_agg
-from inc_acf cimport AcfAgg
+from compressors cimport inc_acf, inc_acf_agg
+from compressors.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np
@@ -136,7 +136,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_acf_agg(long [:] x, double[:] y
     real_areas = triangle_areas_from_array(x, y) # computing the areas for all triangles
     heap.initialize_from_np(area_heap, map_node_to_heap, real_areas) # Initialize the heap
     inc_acf.initialize(acf_model, nlags) # initialize the aggregates
-    inc_acf_agg.fit(acf_model, y, aggregates, kappa)  # extract the aggregates
+    inc_acf_agg.fit_mean(acf_model, y, aggregates, kappa)  # extract the aggregates
     inc_acf.get_acf(acf_model, raw_acf) # get raw acf
 
     while area_heap.values[0].value < inf:
@@ -146,10 +146,10 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_acf_agg(long [:] x, double[:] y
             start = min_node.left
             end = min_node.right
             if start + 2 < end:
-                inc_acf_agg.interpolate_update(acf_model, y, aggregates, start, end, kappa)
+                inc_acf_agg.interpolate_update_mean(acf_model, y, aggregates, start, end, kappa)
             else:
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
-                inc_acf_agg.update(acf_model, y, aggregates, x_a, start + 1, kappa)
+                inc_acf_agg.update_mean(acf_model, y, aggregates, x_a, start + 1, kappa)
 
             inc_acf.get_acf(acf_model, c_acf)
             ace = math_utils.mae(raw_acf, c_acf, nlags)

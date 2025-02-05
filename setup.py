@@ -39,6 +39,12 @@ extensions = [
         extra_compile_args=[opt_compiler]
     ),
     Extension(
+        name="compressors.visvalingam_whyat",
+        sources=["compressors/visvalingam_whyat.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
         name="compressors.turning_point",
         sources=["compressors/turning_point.pyx"],
         language="c++",

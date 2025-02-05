@@ -317,7 +317,7 @@ class UCRLoader(Loader):
 
 
 class TSFReader:
-    raw_root_file = os.path.join('data', 'raw')
+    raw_root_file = os.path.join('data')
     compressed_root_file = os.path.join('data', 'compressed')
 
     def convert_tsf_to_dataframe(self, full_file_path_and_name, replace_missing_vals_with="NaN", value_column_name="series_value"):
