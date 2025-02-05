@@ -3,8 +3,8 @@
 *.html
 .idea
 /build/
-./data/UCR_data/*
-./data/compressed/*
+./data/UCR_data/
+./data/compressed/
 __pycache__
 compressors/__pycache__
 *.idea
