@@ -1,1 +1,0 @@
-cpdef simplify(double[:] y, int nlags, double acf_threshold)

@@ -46,26 +46,36 @@ python run_cameo.py hepc 0.001
 
 ### Running VW
 
-To run any of the line-simplification methods implemented in `./compressors/` you can do the following: 
+To run any of the line-simplification methods implemented in `./compressors/` you can do the following:
 
 ```python
-import compressors.visvalingam_whyat as vw
-from data_loader import DataFactory
+import sys
 import numpy as np
+from utils.metrics import nrmse
+from data_loader import DataFactory
+from compression.line_simplification import LineSimplification
 
-factory = DataFactory()
-data_loader = factory.load_data('hepc', 'data')
-nlags = data_loader.seasonality
-y = np.squeeze(data_loader.data.values)
-x = np.arange(y.shape[0])
-error_bound = 0.01
-vw_output = vw.simplify(x, y, nlags, error_bound)
-decompressed_points = np.interp(np.arange(y.shape[0]), x[vw_output], y[vw_output])
-print('Compression ratio:', round(y.shape[0]/np.sum(vw_output), 2))
-print('Decompression MSE:', np.mean((decompressed_points-y)**2))
+
+if __name__ == '__main__':
+    data_name = sys.argv[1]
+    error_bound = float(sys.argv[2])
+    factory = DataFactory()
+    data_loader = factory.load_data(data_name, 'data')
+    nlags = data_loader.seasonality
+    y = np.squeeze(data_loader.data.values)
+    x = np.arange(y.shape[0])
+    hops = np.log(y.shape[0])*10
+    kappa = data_loader.aggregation
+
+    line_simp = LineSimplification()
+    line_simp.set_target(target='vw') # or tp, pip
+    comp_y = line_simp.compress(y.copy(), error_bound, nlags, hops, kappa)
+    decomp_y = line_simp.decompress(comp_y)
+    print('Compression ratio:', round(y.shape[0]/np.sum(comp_y), 2))
+    print('Decompression NRMSE:', np.round(nrmse(decomp_y, y), 4))
 ```
 
-The same procedure applies for `turning points` and `perceptual important points`. 
+The same procedure applies for `turning points (tp)` and `perceptual important points (pip)`. 
 
 ### Running PMC, SWING and SP
 
@@ -74,7 +84,7 @@ Install [TerseTS](https://github.com/cmcuza/TerseTS/) and you are ready to go!
 ### Running SWAB
 
 ```python
-from compressors.swab import swab
+from compression.lpc.swab import swab
 from data_loader import DataFactory
 import numpy as np
 
@@ -87,8 +97,8 @@ error_bound = 0.01
 segments = swab(x, y, error_bound)
 remaining_points = np.concatenate(segments)
 decompressed_points = np.interp(np.arange(y.shape[0]), x[remaining_points], y[remaining_points])
-print('Compression ratio:', round(y.shape[0]/len(remaining_points), 2))
-print('Decompression MSE:', np.mean((decompressed_points-y)**2))
+print('Compression ratio:', round(y.shape[0] / len(remaining_points), 2))
+print('Decompression MSE:', np.mean((decompressed_points - y) ** 2))
 ```
 
 ### Running Anomaly Detection Experiments

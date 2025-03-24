@@ -1,19 +1,30 @@
 import sys
-from compressors.cameo import simplify_by_blocking
-from data_loader import *
+import numpy as np
+from utils.metrics import nrmse
+from data_loader import DataFactory
+from compression.line_simplification import LineSimplification
 
 
 if __name__ == '__main__':
     data_name = sys.argv[1]
-    acf_threshold = float(sys.argv[2])
+    error_bound = float(sys.argv[2])
     factory = DataFactory()
     data_loader = factory.load_data(data_name, 'data')
-    acf = data_loader.seasonality
+    nlags = data_loader.seasonality
     y = np.squeeze(data_loader.data.values)
     x = np.arange(y.shape[0])
     hops = np.log(y.shape[0])*10
-    cameo_out = simplify_by_blocking(x, y.copy(), hops, acf, acf_threshold)
-    decompressed_points = np.interp(np.arange(y.shape[0]), x[cameo_out], y[cameo_out])
-    print('Compression ratio:', round(y.shape[0]/np.sum(cameo_out), 2))
-    print('Decompression MSE:', np.mean((decompressed_points-y)**2))
+    kappa = data_loader.aggregation
+
+    line_simp = LineSimplification()
+    line_simp.set_target(target='sip') # can be vw, tp, pip
+    comp_y = line_simp.compress(y.copy(), error_bound, nlags, hops, kappa)
+    decomp_y = line_simp.decompress(comp_y)
+    print('Compression ratio:', round(y.shape[0]/np.sum(comp_y), 2))
+    print('Decompression NRMSE:', np.round(nrmse(decomp_y, y), 4))
+
+
+
+
+
 

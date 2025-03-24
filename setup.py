@@ -5,73 +5,113 @@ import sys
 
 if sys.platform.startswith("win"):
     openmp_arg = '-openmp'
-    opt_compiler = '/O2'
-    # opt_compiler = '/O0'
+    opt_compiler = '/O2'  # Default optimization level for MSVC
 else:
     openmp_arg = '-fopenmp'
-    opt_compiler = '-O3'
-    # opt_compiler = '-Og'
+    opt_compiler = '-O3'  # Default optimization level for GCC
 
 extensions = [
     Extension(
-        name="compressors.cameo",
-        sources=["compressors/cameo.pyx"],
+        name="compression.lpc.cameo",
+        sources=["compression/lpc/cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="compressors.heap",
-        sources=["compressors/heap.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compressors.pip",
-        sources=["compressors/pip.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compressors.pip_heap",
-        sources=["compressors/pip_heap.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compressors.visvalingam_whyat",
-        sources=["compressors/visvalingam_whyat.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compressors.turning_point",
-        sources=["compressors/turning_point.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compressors.agg_cameo",
-        sources=["compressors/agg_cameo.pyx"],
+        name="compression.lpc.agg_cameo",
+        sources=["compression/lpc/agg_cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="compressors.inc_acf",
-        sources=["compressors/inc_acf.pyx"],
+        name="compression.lpc.heap",
+        sources=["compression/lpc/heap.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compressors.inc_acf_agg",
-        sources=["compressors/inc_acf_agg.pyx"],
+        name="compression.lpc.pip",
+        sources=["compression/lpc/pip.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compressors.math_utils",
-        sources=["compressors/math_utils.pyx"],
+        name="compression.lpc.pip_heap",
+        sources=["compression/lpc/pip_heap.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compression.lpc.visvalingam_whyat",
+        sources=["compression/lpc/visvalingam_whyat.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compression.lpc.turning_point",
+        sources=["compression/lpc/turning_point.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compression.lpc.inc_acf",
+        sources=["compression/lpc/inc_acf.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compression.lpc.inc_acf_agg",
+        sources=["compression/lpc/inc_acf_agg.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler]
+    ),
+    Extension(
+        name="compression.lpc.math_utils",
+        sources=["compression/lpc/math_utils.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.lpc.swab",
+        sources=["compression/lpc/swab.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.lpc.heap_swab",
+        sources=["compression/lpc/heap_swab.pyx"],
+        language="c++",
+        extra_compile_args=[opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_agg_cameo",
+        sources=["compression/hpc/hp_agg_cameo.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_heap",
+        sources=["compression/hpc/hp_heap.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_acf_agg_model",
+        sources=["compression/hpc/hp_acf_agg_model.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_math_lib",
+        sources=["compression/hpc/hp_math_lib.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
@@ -81,11 +121,7 @@ extensions = [
 setup(
     name='cameo',
     version="0.1",
-    packages=["compressors"],
-    # extra_compile_args=["-g"],
-    ext_modules=cythonize(extensions,
-                          show_all_warnings=True,
-                          # compiler_directives={'linetrace': True, 'binding': True},
-                          annotate=True),
+    packages=["compression"],
+    ext_modules=cythonize(extensions, show_all_warnings=True, annotate=True),
     include_dirs=[np.get_include()]
 )

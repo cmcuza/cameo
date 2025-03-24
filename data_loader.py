@@ -7,6 +7,17 @@ from datetime import datetime
 from os.path import join as path_join
 
 
+def auto_corr(x, max_lag):
+    return np.asarray([np.corrcoef(x[:-lag], x[lag:])[0, 1] for lag in range(1, max_lag+1)])
+
+def extract_agg(x, m):
+    if m:
+        new_size = x.shape[0] // m
+        a = x[:new_size * m].reshape(new_size, m)
+        return np.nanmean(a, axis=1)
+
+    return x
+
 class Loader:
     data: pd.DataFrame = None
     name = 'loader'

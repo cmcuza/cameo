@@ -5,6 +5,9 @@
 /build/
 ./data/UCR_data/
 ./data/compressed/
+# still in progress
+./reproducibility/
+./testing/
 __pycache__
-compressors/__pycache__
+lpc/__pycache__
 *.idea

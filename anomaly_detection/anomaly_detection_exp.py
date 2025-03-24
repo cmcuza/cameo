@@ -1,7 +1,7 @@
 import copy
 from statsmodels.tsa.stattools import acf
 from anomaly_detection.matrix_profile import detect_anomalies
-from compressors.factory import *
+from compression.lpc.factory import *
 
 def get_seasonality_length(d):
     out = []

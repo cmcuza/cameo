@@ -1,0 +1,5 @@
+dataset,line_simplification,error_bound,cr,nrmse
+uk_electrical_demand,sip,0.01,22.49,0.133
+uk_electrical_demand,pip,0.01,6.01,0.0124
+uk_electrical_demand,vw,0.01,4.98,0.0098
+uk_electrical_demand,tp,0.01,6.04,0.0355

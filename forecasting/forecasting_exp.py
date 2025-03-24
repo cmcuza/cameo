@@ -1,7 +1,7 @@
 from data_loader import TSFReader
 from forecasting.forecasting_functions import get_forecasting
 import copy
-from compressors.factory import *
+from compression.factory import *
 
 def run_forecasting_on(new_tsf, forecasting_model, forecast_horizon, compressor, error_bound):
     r = TSFReader()
