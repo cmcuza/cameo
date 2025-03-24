@@ -68,38 +68,18 @@ if __name__ == '__main__':
     kappa = data_loader.aggregation
 
     line_simp = LineSimplification()
-    line_simp.set_target(target='vw') # or tp, pip
+    line_simp.set_target(target='vw') # or tp, pip, swab
     comp_y = line_simp.compress(y.copy(), error_bound, nlags, hops, kappa)
     decomp_y = line_simp.decompress(comp_y)
     print('Compression ratio:', round(y.shape[0]/np.sum(comp_y), 2))
     print('Decompression NRMSE:', np.round(nrmse(decomp_y, y), 4))
 ```
 
-The same procedure applies for `turning points (tp)` and `perceptual important points (pip)`. 
+The same procedure applies for `turning points (tp)`, `perceptual important points (pip)` and `swab (swab)`. 
 
 ### Running PMC, SWING and SP
 
 Install [TerseTS](https://github.com/cmcuza/TerseTS/) and you are ready to go!
-
-### Running SWAB
-
-```python
-from compression.lpc.swab import swab
-from data_loader import DataFactory
-import numpy as np
-
-factory = DataFactory()
-data_loader = factory.load_data('hepc', 'data')
-nlags = data_loader.seasonality
-y = np.squeeze(data_loader.data.values)
-x = np.arange(y.shape[0])
-error_bound = 0.01
-segments = swab(x, y, error_bound)
-remaining_points = np.concatenate(segments)
-decompressed_points = np.interp(np.arange(y.shape[0]), x[remaining_points], y[remaining_points])
-print('Compression ratio:', round(y.shape[0] / len(remaining_points), 2))
-print('Decompression MSE:', np.mean((decompressed_points - y) ** 2))
-```
 
 ### Running Anomaly Detection Experiments
 
