@@ -177,7 +177,7 @@ cdef void parallel_look_ahead_reheap(HPAcfAgg *acf_model,
     free(nb_imp)
 
 
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_agg_cameo(double[:] ts, 
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_agg_sip(double[:] ts,
                                                             Py_ssize_t hops,
                                                             Py_ssize_t nlags, 
                                                             Py_ssize_t kappa, 
