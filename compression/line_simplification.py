@@ -43,9 +43,7 @@ class LineSimplification(object):
         self.no_removed_indices = simplify_by_swab(self.x[:, 0].astype(int), self.x[:, 1], self.acf_threshold)
 
     def simplify_sip(self):
-        self.no_removed_indices = simplify_by_sip(self.x[:, 0].astype(int), self.x[:, 1],
-                                                       self.blocking,
-                                                       self.nlags, self.acf_threshold)
+        self.no_removed_indices = simplify_by_sip(self.x[:, 1], self.blocking, self.nlags, self.acf_threshold)
 
     def from_acf_threshold(self):
         pos = np.where(self.no_removed_indices)[0]

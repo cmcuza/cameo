@@ -2,6 +2,7 @@
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
+from libc.stdio cimport printf
 from compression.hpc cimport hp_math_lib
 from compression.hpc.hp_acf_agg_model cimport AcfPtr
 from numpy.math cimport INFINITY
@@ -21,8 +22,8 @@ cdef void initialize(AcfPtr model, Py_ssize_t nlags):
 
 cdef void fit(AcfPtr model, double[:] x, long double [:] aggregates, Py_ssize_t kappa):
     cdef Py_ssize_t n = x.shape[0], an=aggregates.shape[0], lag, i, j
-    cdef long double[:] cum_sum = np.empty_like(aggregates)
-    cdef long double[:] power_cum_sum = np.empty_like(aggregates)
+    cdef long double[:] cum_sum = np.empty_like(aggregates, dtype=np.longdouble)
+    cdef long double[:] power_cum_sum = np.empty_like(aggregates, dtype=np.longdouble)
 
     j = 0
     i = 0
@@ -44,9 +45,7 @@ cdef void fit(AcfPtr model, double[:] x, long double [:] aggregates, Py_ssize_t 
         model.yss[lag] = power_cum_sum[an - 1] - power_cum_sum[lag]
         model.sxy[lag] = hp_math_lib.dot_product(aggregates[:an - lag - 1], aggregates[lag + 1:])
 
-
-cdef void update(AcfPtr model, double[:] x, long double[:] aggregates,
-                      long double x_a, Py_ssize_t index, Py_ssize_t kappa):
+cdef void update(AcfPtr model, double[:] x, long double[:] aggregates, long double x_a, Py_ssize_t index, Py_ssize_t kappa):
     cdef Py_ssize_t agg_index = index//kappa
     cdef long double delta, delta_ss
     delta = (x_a - x[index])/kappa # aggregate function
@@ -101,7 +100,7 @@ cdef inline void update_outside_lags(AcfPtr model,
         model.sxy[lag] += delta * (aggregates[index_a + lag + 1] + aggregates[index_a-lag-1])
 
 
-cdef void interpolate_update_mean(AcfPtr model, double[:] x, 
+cdef void interpolate_update(AcfPtr model, double[:] x, 
                                 long double[:] aggregates, 
                                 Py_ssize_t start, Py_ssize_t end, 
                                 Py_ssize_t kappa):
@@ -110,12 +109,12 @@ cdef void interpolate_update_mean(AcfPtr model, double[:] x,
     cdef Py_ssize_t end_index_a = (end-1) // kappa
 
     if start_index_a <= model.nlags or end_index_a >= model.n-model.nlags:
-        interpolate_update_inside_lags_mean(model, x, aggregates, start, end, start_index_a, end_index_a, kappa)
+        interpolate_update_inside_lags(model, x, aggregates, start, end, start_index_a, end_index_a, kappa)
     else:
-        interpolate_update_outside_lags_mean(model, x, aggregates, start, end, start_index_a, end_index_a, kappa)
+        interpolate_update_outside_lags(model, x, aggregates, start, end, start_index_a, end_index_a, kappa)
 
 
-cdef void interpolate_update_outside_lags_mean(AcfPtr model, 
+cdef void interpolate_update_outside_lags(AcfPtr model, 
                                             double[:] x, long double[:] aggregates,
                                             Py_ssize_t start, Py_ssize_t end, 
                                             Py_ssize_t start_index_a,
@@ -165,7 +164,7 @@ cdef void interpolate_update_outside_lags_mean(AcfPtr model,
     free(sum_agg_deltas)
 
 
-cdef void interpolate_update_inside_lags_mean(AcfPtr model, double[:] x, 
+cdef void interpolate_update_inside_lags(AcfPtr model, double[:] x, 
                                             long double[:] aggregates, Py_ssize_t start, Py_ssize_t end, Py_ssize_t start_index_a,
                                             Py_ssize_t end_index_a, Py_ssize_t kappa):
     cdef long double delta, delta_ss, slope, x_a

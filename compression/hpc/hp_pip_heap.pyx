@@ -5,8 +5,7 @@ from libc.math cimport fabs
 cimport cython
 
 
-
-cdef double vertical_distance(NodePtr left, NodePtr node, NodePtr right):
+cdef double vertical_distance(HPNodePtr left, HPNodePtr node, HPNodePtr right):
     cdef:
         double EPSILON = 1e-06, result
         Py_ssize_t a_x, b_x, c_x
@@ -29,8 +28,7 @@ cdef double vertical_distance(NodePtr left, NodePtr node, NodePtr right):
     return result
 
 
-
-cdef void init_node(NodePtr node, HeapPtr heap,  Py_ssize_t i):
+cdef void init_node(HPNodePtr node, HPHeapPtr heap,  Py_ssize_t i):
     node.index = i
     node.parent = heap
     node.cache = INFINITY
@@ -41,9 +39,7 @@ cdef void init_node(NodePtr node, HeapPtr heap,  Py_ssize_t i):
     node.right = NULL
 
 
-
-
-cdef void update_cache(NodePtr node):
+cdef void update_cache(HPNodePtr node):
     if node.left is not NULL and node.right is not NULL:
         node.cache = vertical_distance(node.left, node, node.right)
     else:
@@ -52,9 +48,7 @@ cdef void update_cache(NodePtr node):
     notify_change(node.parent, node.index)
 
 
-
-
-cdef NodePtr put_after(NodePtr node, NodePtr tail):
+cdef HPNodePtr put_after(HPNodePtr node, HPNodePtr tail):
     if tail is not NULL:
         tail.right = node
         update_cache(tail)
@@ -63,9 +57,7 @@ cdef NodePtr put_after(NodePtr node, NodePtr tail):
     return node
 
 
-
-
-cdef PIPNode recycle(NodePtr node):
+cdef HPPIPNode recycle(HPNodePtr node):
     if node.left is NULL:
         node.parent.head = node.right
     else:
@@ -81,11 +73,9 @@ cdef PIPNode recycle(NodePtr node):
     return clear(node)
 
 
-
-
-cdef PIPNode clear(NodePtr node):
-    cdef PIPNode returned_node
-    cdef NodePtr left, right
+cdef HPPIPNode clear(HPNodePtr node):
+    cdef HPPIPNode returned_node
+    cdef HPNodePtr left, right
 
     returned_node.left = node.left
     returned_node.right = node.right
@@ -98,14 +88,12 @@ cdef PIPNode clear(NodePtr node):
     node.cache = INFINITY
     free(node)
     return returned_node
-    # return ret, left, right
 
 
 
-
-cdef void init_heap(HeapPtr heap,  Py_ssize_t size):
+cdef void init_heap(HPHeapPtr heap,  Py_ssize_t size):
     cdef  Py_ssize_t i
-    cdef NodePtr node
+    cdef HPNodePtr node
 
     heap.head = NULL
     heap.tail = NULL
@@ -113,16 +101,14 @@ cdef void init_heap(HeapPtr heap,  Py_ssize_t size):
     heap.m_size = size
     heap.global_order = 0
 
-    heap.values = <NodeDbPtr> malloc(size*sizeof(NodePtr))
+    heap.values = <HPNodeDbPtr> malloc(size*sizeof(HPNodePtr))
     for i in range(size):
-        node = <NodePtr> malloc(sizeof(PIPNode))
+        node = <HPNodePtr> malloc(sizeof(HPPIPNode))
         init_node(node, heap, i)
         heap.values[i] = node
 
 
-
-
-cdef NodePtr acquire_item(HeapPtr heap,  Py_ssize_t ts, double value):
+cdef HPNodePtr acquire_item(HPHeapPtr heap,  Py_ssize_t ts, double value):
     node = heap.values[heap.size]
     node.ts = ts
     node.value = value
@@ -133,23 +119,18 @@ cdef NodePtr acquire_item(HeapPtr heap,  Py_ssize_t ts, double value):
     return node
 
 
-
-
-cdef void add(HeapPtr heap,  Py_ssize_t ts, double value):
-    cdef NodePtr node
+cdef void add(HPHeapPtr heap,  Py_ssize_t ts, double value):
+    cdef HPNodePtr node
     node = acquire_item(heap, ts, value)
     heap.tail = put_after(node, heap.tail)
     if heap.head is NULL:
         heap.head = heap.tail
 
-
-
-cdef  Py_ssize_t notify_change(HeapPtr heap,  Py_ssize_t index):
+cdef Py_ssize_t notify_change(HPHeapPtr heap,  Py_ssize_t index):
     return bubble_down(heap, bubble_up(heap, index))
 
 
-
-cdef  Py_ssize_t min(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j,  Py_ssize_t k):
+cdef Py_ssize_t min(HPHeapPtr heap,  Py_ssize_t i,  Py_ssize_t j,  Py_ssize_t k):
     cdef  Py_ssize_t result
 
     if k != -1:
@@ -160,10 +141,8 @@ cdef  Py_ssize_t min(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j,  Py_ssize_t k):
     return result
 
 
-
-
-cdef PIPNode remove_at(HeapPtr heap,  Py_ssize_t index):
-    cdef NodePtr node
+cdef HPPIPNode remove_at(HPHeapPtr heap,  Py_ssize_t index):
+    cdef HPNodePtr node
 
     heap.size -= 1
     swap(heap, index, heap.size)
@@ -173,16 +152,12 @@ cdef PIPNode remove_at(HeapPtr heap,  Py_ssize_t index):
     return recycle(node)
 
 
-
-
-cdef  Py_ssize_t bubble_up(HeapPtr heap,  Py_ssize_t n):
+cdef  Py_ssize_t bubble_up(HPHeapPtr heap,  Py_ssize_t n):
     while (n != 0) and less(heap, n, (n-1)//2):
         n = swap(heap, n, (n-1)//2)
     return n
 
-
-
-cdef  Py_ssize_t bubble_down(HeapPtr heap,  Py_ssize_t n):
+cdef  Py_ssize_t bubble_down(HPHeapPtr heap,  Py_ssize_t n):
     cdef  Py_ssize_t k
 
     k = min(heap, n, n*2+1, n*2+2)
@@ -191,22 +166,16 @@ cdef  Py_ssize_t bubble_down(HeapPtr heap,  Py_ssize_t n):
         k = min(heap, n, n*2+1, n*2+2)
     return n
 
-
-
-cdef  Py_ssize_t swap(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
+cdef  Py_ssize_t swap(HPHeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
     heap.values[i].index, heap.values[j].index = j, i
     heap.values[i], heap.values[j] = heap.values[j], heap.values[i]
     return j
 
 
-
-
-cdef bint less(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
+cdef bint less(HPHeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
     return (i < heap.size) and (j >= heap.size or i_smaller_than_j(heap, i, j))
 
-
-
-cdef bint i_smaller_than_j(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
+cdef bint i_smaller_than_j(HPHeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
     cdef bint result
 
     if heap.values[i].cache != heap.values[j].cache:
@@ -216,19 +185,16 @@ cdef bint i_smaller_than_j(HeapPtr heap,  Py_ssize_t i,  Py_ssize_t j):
 
     return result
 
-
-
-cdef void iterate(HeapPtr heap):
+cdef void iterate(HPHeapPtr heap):
     current = heap.head
     while current is not NULL:
         # yield current.value
         current = current.right
 
 
-
-cdef void deinit_heap(HeapPtr heap):
-    cdef NodePtr current = heap.head
-    cdef NodePtr next
+cdef void deinit_heap(HPHeapPtr heap):
+    cdef HPNodePtr current = heap.head
+    cdef HPNodePtr next
 
     while current is not NULL:
         # print("Current", current.ts, current.value, current.index, current.cache)

@@ -1,3 +1,4 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 cimport cython
 from libc.math cimport fabs, sqrt
 from cython.parallel cimport prange, parallel
@@ -5,12 +6,9 @@ from libc.stdlib cimport malloc, free, abort
 from compression.lpc.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double csum(double[:] x, int n):
+cdef double csum(double[:] x, Py_ssize_t n):
     cdef:
-        int i
+        Py_ssize_t i
         double result = 0.0
 
     for i in range(n):
@@ -18,24 +16,20 @@ cdef double csum(double[:] x, int n):
 
     return result
 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef double dot_product(double[:] x, double[:] y):
     cdef:
-        int i, n = x.shape[0]
+        Py_ssize_t i, n = x.shape[0]
         double result = 0.0
 
-    for i in prange(n, nogil=True):
+    for i in range(n):
         result += x[i] * y[i]
 
     return result
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void scan(double[:] x, double[:] out1, double[:] out2) nogil:
+
+cdef void scan(double[:] x, double[:] out1, double[:] out2) noexcept nogil:
     cdef:
-        int i, n = x.shape[0]
+        Py_ssize_t i, n = x.shape[0]
 
     out1[0] = x[0]
     out2[0] = x[0]*x[0]
@@ -43,17 +37,15 @@ cdef void scan(double[:] x, double[:] out1, double[:] out2) nogil:
         out1[i] = out1[i-1] + x[i]
         out2[i] = out2[i-1] + x[i]*x[i]
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void cumsum_cumsum(double[:] arr, double[:] cumsum1, double[:] cumsum2):
     cdef:
-        int n = arr.shape[0]
-        int num_threads = 8
+        Py_ssize_t n = arr.shape[0]
+        Py_ssize_t num_threads = 8
         double* sums1 = <double*> malloc(num_threads * sizeof(double))
         double* sums2 = <double*> malloc(num_threads * sizeof(double))
-        int chunk_size = n // num_threads
-        int tid, start, end, i
+        Py_ssize_t chunk_size = n // num_threads
+        Py_ssize_t tid, start, end, i
 
     for tid in prange(num_threads, nogil=True, num_threads=num_threads, schedule='static'):
         start = tid * chunk_size
@@ -79,13 +71,10 @@ cdef void cumsum_cumsum(double[:] arr, double[:] cumsum1, double[:] cumsum2):
     free(sums2)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double no_gil_mae(double *x, double *y, int n) nogil:
+cdef double no_gil_mae(double *x, double *y, Py_ssize_t n) noexcept nogil:
     cdef:
         double error_sum = 0.0
-        int i
+        Py_ssize_t i
 
     for i in range(n):
         error_sum += fabs(x[i] - y[i])
@@ -93,13 +82,10 @@ cdef double no_gil_mae(double *x, double *y, int n) nogil:
     return error_sum / n
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double mae(double *x, double *y, int n):
+cdef double mae(double *x, double *y, Py_ssize_t n):
     cdef:
         double error_sum = 0.0
-        int i
+        Py_ssize_t i
 
     for i in range(n):
         error_sum += fabs(x[i] - y[i])
@@ -107,9 +93,6 @@ cdef double mae(double *x, double *y, int n):
     return error_sum / n
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
 cdef double triangle_area(const double &x_p1, const double &y_p1,
                                  const double &x_p2, const double &y_p2,
                                  const double &x_p3, const double &y_p3):
@@ -117,11 +100,8 @@ cdef double triangle_area(const double &x_p1, const double &y_p1,
     return fabs(x_p1 * (y_p2 - y_p3) + x_p2 * (y_p3 - y_p1) + x_p3 * (y_p1 - y_p2)) / 2.
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef double mean(double[:] x):
-    cdef int i, n = x.shape[0]
+    cdef Py_ssize_t i, n = x.shape[0]
     cdef double mu = 0
 
     for i in prange(n, nogil=True):
@@ -129,11 +109,9 @@ cdef double mean(double[:] x):
 
     return mu/n
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef double std(double[:] x, const double & mu):
-    cdef int i, n = x.shape[0]
+    cdef Py_ssize_t i, n = x.shape[0]
     cdef double sigma = 0
 
     for i in prange(n, nogil=True):
@@ -141,12 +119,11 @@ cdef double std(double[:] x, const double & mu):
 
     return sigma/(n-1)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
+
 cdef double corrcoef(double[:] x, double[:] y):
     cdef double mean_x, mean_y, rho_num = 0, rho_dem_x = 0, rho_dem_y = 0
-    cdef int i
+    cdef Py_ssize_t i
 
     mean_x = mean(x)
     mean_y = mean(y)
@@ -158,16 +135,15 @@ cdef double corrcoef(double[:] x, double[:] y):
 
     return rho_num/sqrt(rho_dem_x*rho_dem_y)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double * acf_error) nogil:
+
+
+cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double * acf_error) noexcept nogil:
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef double * c_acf
-    cdef int index, lag, n
+    cdef Py_ssize_t index, lag, n
     acf_error[0] = acf_error[model.n-1] = INFINITY
 
-    with nogil, parallel():
+    with nogil, parallel(num_threads=8):
         c_acf = <double *> malloc(model.nlags * sizeof(double))
 
         if c_acf is NULL:
@@ -223,14 +199,11 @@ cdef void compute_acf_fall(AcfAgg *model, double[:] x, double * raw_acf, double 
         free(c_acf)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void compute_acf_agg_mean_fall(AcfAgg *model, double [:]x, double [:]aggregates,
-                               double *raw_acf, double *acf_error, int x_n, int kappa) nogil:
+                               double *raw_acf, double *acf_error, Py_ssize_t x_n, Py_ssize_t kappa) noexcept nogil:
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef double *c_acf
-    cdef int index, lag, n, agg_index
+    cdef Py_ssize_t index, lag, n, agg_index
     acf_error[0] = acf_error[x_n-1] = INFINITY
 
     with nogil, parallel():
@@ -290,14 +263,11 @@ cdef void compute_acf_agg_mean_fall(AcfAgg *model, double [:]x, double [:]aggreg
         free(c_acf)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void compute_acf_agg_sum_fall(AcfAgg *model, double [:]x, double [:]aggregates,
-                               double *raw_acf, double *acf_error, int x_n, int kappa) nogil:
+                               double *raw_acf, double *acf_error, Py_ssize_t x_n, Py_ssize_t kappa) noexcept nogil:
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef double *c_acf
-    cdef int index, lag, n, agg_index
+    cdef Py_ssize_t index, lag, n, agg_index
     acf_error[0] = acf_error[x_n-1] = INFINITY
 
     with nogil, parallel():

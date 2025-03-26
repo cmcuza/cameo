@@ -32,15 +32,15 @@ cdef inline void update_outside_lags(AcfPtr model,
                                     long double delta_ss,
                                     Py_ssize_t index_a)
 
-cdef void interpolate_update_mean(AcfPtr model, double[:] x, long double[:] aggregates, Py_ssize_t start, Py_ssize_t end, Py_ssize_t kappa)
+cdef void interpolate_update(AcfPtr model, double[:] x, long double[:] aggregates, Py_ssize_t start, Py_ssize_t end, Py_ssize_t kappa)
 
-cdef void interpolate_update_outside_lags_mean(AcfPtr model, 
+cdef void interpolate_update_outside_lags(AcfPtr model, 
                                             double[:] x, long double[:] aggregates,
                                             Py_ssize_t start, Py_ssize_t end, 
                                             Py_ssize_t start_index_a,
                                             Py_ssize_t end_index_a, Py_ssize_t kappa)
 
-cdef void interpolate_update_inside_lags_mean(AcfPtr model, double[:] x, 
+cdef void interpolate_update_inside_lags(AcfPtr model, double[:] x, 
                                             long double[:] aggregates, Py_ssize_t start, Py_ssize_t end, Py_ssize_t start_index_a,
                                             Py_ssize_t end_index_a, Py_ssize_t kappa)
 

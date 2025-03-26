@@ -1,5 +1,6 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 cdef struct AcfAgg:
-    int nlags, n
+    Py_ssize_t nlags, n
     double *sxy
     double *xs
     double *ys

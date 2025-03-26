@@ -26,7 +26,7 @@ cdef long double csum(double[:] x, Py_ssize_t n):
 
     return result
 
-cdef void scan(long double[:] x, long double[:] out1, long double[:] out2) nogil:
+cdef void scan(long double[:] x, long double[:] out1, long double[:] out2) noexcept nogil:
     cdef:
         Py_ssize_t i, n = x.shape[0]
 
@@ -70,7 +70,7 @@ cdef void cumsum_cumsum(long double[:] arr, long double[:] cumsum1, long double[
     free(sums2)
 
 
-cdef double no_gil_mae(long double *x, long double *y, Py_ssize_t n) nogil:
+cdef double no_gil_mae(long double *x, long double *y, Py_ssize_t n) noexcept nogil:
     cdef:
         long double error_sum = 0.0
         Py_ssize_t i
@@ -100,7 +100,7 @@ cdef double triangle_area(const double &x_p1, const double &y_p1,
 
 
 cdef void compute_acf_agg_mean_fall(HPAcfAgg *model, double [:]x, long double [:]aggregates,
-                               long double *raw_acf, long double *acf_error, Py_ssize_t x_n, Py_ssize_t kappa) nogil:
+                               long double *raw_acf, long double *acf_error, Py_ssize_t x_n, Py_ssize_t kappa) noexcept nogil:
     cdef long double delta, delta_ss, ys, yss, xs, xss, sxy
     cdef long double *c_acf
     cdef Py_ssize_t index, lag, n, agg_index

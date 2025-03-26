@@ -1,3 +1,4 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
@@ -14,8 +15,7 @@ cdef void initialize(AcfPtr model, Py_ssize_t nlags):
     model.yss = <double*> malloc(nlags * sizeof(double))
     model.nlags = nlags
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void fit(AcfPtr model, double[:] x):
     cdef Py_ssize_t n = x.shape[0], lag
     cdef double[:] x_cum_sum = np.empty_like(x)
@@ -30,8 +30,7 @@ cdef void fit(AcfPtr model, double[:] x):
         model.yss[lag] = power_cum_sum[n-1] - power_cum_sum[lag]
         model.sxy[lag] = math_utils.dot_product(x[:n-lag-1], x[lag+1:])
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 @cython.cdivision(True)
 cdef void get_acf(AcfPtr model, double* result):
     cdef Py_ssize_t lag, n = model.n
@@ -42,8 +41,7 @@ cdef void get_acf(AcfPtr model, double* result):
                       sqrt((n*model.xss[lag] - model.xs[lag]*model.xs[lag])*
                            (n*model.yss[lag] - model.ys[lag]*model.ys[lag]))
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 @cython.cdivision(True)
 cdef void update(AcfPtr model, double[:] x, const double x_a, const Py_ssize_t index):
     cdef double delta, delta_ss
@@ -57,8 +55,7 @@ cdef void update(AcfPtr model, double[:] x, const double x_a, const Py_ssize_t i
 
         x[index] = x_a
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 @cython.cdivision(True)
 cdef double look_ahead_impact(AcfPtr model, double[:] x, double *raw_acf, const double x_a, const Py_ssize_t index) nogil:
     cdef double delta, delta_ss, ys, yss, xs, xss, sxy, lag_acf, impact = 0.0
@@ -97,8 +94,7 @@ cdef double look_ahead_impact(AcfPtr model, double[:] x, double *raw_acf, const 
 
     return impact/model.nlags
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef inline void update_inside_lags(AcfPtr model, double[:] x,
                                     const double delta,
                                     const double delta_ss,
@@ -114,8 +110,7 @@ cdef inline void update_inside_lags(AcfPtr model, double[:] x,
             model.xss[lag] += delta_ss
             model.sxy[lag] += delta*x[index + lag + 1]
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef inline void update_outside_lags(AcfPtr model, double[:] x,
                                      const double delta,
                                      const double delta_ss,
@@ -128,8 +123,7 @@ cdef inline void update_outside_lags(AcfPtr model, double[:] x,
         model.xss[lag] += delta_ss
         model.sxy[lag] += delta * (x[index + lag + 1] + x[index-lag-1])
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void interpolate_update(AcfPtr model, double[:] x, Py_ssize_t start, Py_ssize_t end):
     if start <= model.nlags or end >= model.n-model.nlags:
         interpolate_update_inside_lags(model, x, start, end)
@@ -137,8 +131,7 @@ cdef void interpolate_update(AcfPtr model, double[:] x, Py_ssize_t start, Py_ssi
         interpolate_update_outside_lags(model, x, start, end)
 
 @cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void interpolate_update_outside_lags(AcfPtr model, double[:] x, Py_ssize_t start, Py_ssize_t end):
     cdef double delta, delta_ss, slope
     cdef Py_ssize_t i, index, lag, num_lags, num_deltas
@@ -180,8 +173,7 @@ cdef void interpolate_update_outside_lags(AcfPtr model, double[:] x, Py_ssize_t 
     free(x_as)
 
 @cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void interpolate_update_inside_lags(AcfPtr model, double[:] x, Py_ssize_t start, Py_ssize_t end):
     cdef double delta, delta_ss, slope
     cdef Py_ssize_t i, index, lag, num_lags, num_deltas, n
@@ -227,8 +219,7 @@ cdef void interpolate_update_inside_lags(AcfPtr model, double[:] x, Py_ssize_t s
 
 
 @cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef double look_ahead_interpolated_impact(AcfPtr model, double[:] x, double *raw_acf, Py_ssize_t start, Py_ssize_t end) nogil:
     cdef double delta, delta_ss, slope, impact, lag_acf
     cdef Py_ssize_t i, index, lag, num_deltas, n # num_lags

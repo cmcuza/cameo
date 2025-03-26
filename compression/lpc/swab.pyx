@@ -1,3 +1,4 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 from libc.math cimport ceil
 from libc.stdlib cimport malloc, free
 from libc.stdio cimport printf
@@ -12,15 +13,13 @@ from libcpp.utility cimport pair
 from libcpp.algorithm cimport sort
 cimport cython
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double sse_of_segment(int seg_start, int seg_end, int[:] xs, double[:] ys):
+
+cdef double sse_of_segment(Py_ssize_t seg_start, Py_ssize_t seg_end, Py_ssize_t[:] xs, double[:] ys):
     """
     Compute the SSE (sum of squared errors) of fitting a line to
     the points xs[i], ys[i], for i in [seg.start..seg.end].
     """
-    cdef int length, i
+    cdef Py_ssize_t length, i
     cdef double sum_x, sum_y, sum_x2, sum_xy
     cdef double n, var_x, cov_xy, slope, intercept
     cdef double mean_x, mean_y
@@ -73,28 +72,24 @@ cdef double sse_of_segment(int seg_start, int seg_end, int[:] xs, double[:] ys):
 
         return sqrt(sse) if sse > 0 else 0
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef double merge_cost(Segment seg_a, Segment seg_b, int[:] xs, double[:] ys):
+
+cdef double merge_cost(Segment seg_a, Segment seg_b, Py_ssize_t[:] xs, double[:] ys):
     """
     The increment in SSE if segA and segB are merged into one segment,
     """
     # Merged segment covers from min(segA.start, segB.start) .. max(segA.end, segB.end).
-    cdef int merged_start = min(seg_a.seg_start, seg_b.seg_start)
-    cdef int merged_end   = max(seg_a.seg_end, seg_b.seg_end)
+    cdef Py_ssize_t merged_start = min(seg_a.seg_start, seg_b.seg_start)
+    cdef Py_ssize_t merged_end   = max(seg_a.seg_end, seg_b.seg_end)
     cdef double sse_merged = sse_of_segment(merged_start, merged_end, xs, ys)
     return sse_merged
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void build_segments_pairwise(Heap * heap, unordered_map[int, int] &map_node_to_heap, int [:] xs, double [:] ys):
+
+cdef void build_segments_pairwise(Heap * heap, unordered_map[Py_ssize_t, Py_ssize_t] &map_node_to_heap, Py_ssize_t [:] xs, double [:] ys):
     cdef:
-        int n = xs.shape[0]
-        int i = 0, seg_id = 0
-        int start_seg, end_seg
-        int prev_id = -1
+        Py_ssize_t n = xs.shape[0]
+        Py_ssize_t i = 0, seg_id = 0
+        Py_ssize_t start_seg, end_seg
+        Py_ssize_t prev_id = -1
         size_t segments_size = <size_t> (ceil(n / 2.0))
 
     heap.values = <Segment *>malloc(segments_size * sizeof(Segment))
@@ -115,16 +110,14 @@ cdef void build_segments_pairwise(Heap * heap, unordered_map[int, int] &map_node
     heap_lib.initialize(heap, map_node_to_heap, segments_size)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] bottom_up(int [:]xs, double [:]ys, double max_error):
+
+cpdef np.ndarray[np.uint8_t, ndim=1] bottom_up(Py_ssize_t [:]xs, double [:]ys, double max_error):
     cdef:
         size_t n = xs.shape[0]
-        int left_idx, right_idx
+        Py_ssize_t left_idx, right_idx
         double new_cost
         Heap * heap = <Heap *> malloc(sizeof(Heap))
-        unordered_map[int, int] map_node_to_heap
+        unordered_map[Py_ssize_t, Py_ssize_t] map_node_to_heap
         size_t segments_size = <size_t> (ceil(n / 2.0))
         Segment left_seg, new_segment
         Segment min_merge
@@ -177,16 +170,14 @@ cpdef np.ndarray[np.uint8_t, ndim=1] bottom_up(int [:]xs, double [:]ys, double m
 
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef void build_segments_pairwise_aux(Heap * heap, unordered_map[int, int] &map_node_to_heap, int [:] xs, double [:] ys,
-                                      int start_idx, int end_idx):
+
+cdef void build_segments_pairwise_aux(Heap * heap, unordered_map[Py_ssize_t, Py_ssize_t] &map_node_to_heap, Py_ssize_t [:] xs, double [:] ys,
+                                      Py_ssize_t start_idx, Py_ssize_t end_idx):
     cdef:
-        int n = end_idx - start_idx
-        int i = start_idx, seg_id = 0
-        int start_seg, end_seg
-        int prev_id = -1
+        Py_ssize_t n = end_idx - start_idx
+        Py_ssize_t i = start_idx, seg_id = 0
+        Py_ssize_t start_seg, end_seg
+        Py_ssize_t prev_id = -1
         size_t segments_size = <size_t> (ceil(n / 2.0))
 
     heap.values = <Segment *>malloc(segments_size * sizeof(Segment))
@@ -207,20 +198,18 @@ cdef void build_segments_pairwise_aux(Heap * heap, unordered_map[int, int] &map_
     heap_lib.initialize(heap, map_node_to_heap, segments_size)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef vector[pair[int, int]] bottom_up_aux(int [:]xs, double [:]ys, int start_idx, int end_idx, double max_error):
+
+cdef vector[pair[Py_ssize_t, Py_ssize_t]] bottom_up_aux(Py_ssize_t [:]xs, double [:]ys, Py_ssize_t start_idx, Py_ssize_t end_idx, double max_error):
     cdef:
         size_t n = end_idx - start_idx
-        int left_idx, right_idx, j
+        Py_ssize_t left_idx, right_idx, j
         double new_cost
         Heap * heap = <Heap *> malloc(sizeof(Heap))
-        unordered_map[int, int] map_node_to_heap
+        unordered_map[Py_ssize_t, Py_ssize_t] map_node_to_heap
         size_t segments_size = <size_t> (ceil(n / 2.0))
         Segment left_seg, new_segment
         Segment min_merge
-        vector[pair[int, int]] segments
+        vector[pair[Py_ssize_t, Py_ssize_t]] segments
 
     build_segments_pairwise_aux(heap, map_node_to_heap, xs, ys, start_idx, end_idx)
 
@@ -263,7 +252,7 @@ cdef vector[pair[int, int]] bottom_up_aux(int [:]xs, double [:]ys, int start_idx
         heap_lib.reheap(heap, map_node_to_heap, new_segment)
 
     for i in range(heap.c_size):
-        segments.push_back(pair[int, int](heap.values[i].seg_start, heap.values[i].seg_end))
+        segments.push_back(pair[Py_ssize_t, Py_ssize_t](heap.values[i].seg_start, heap.values[i].seg_end))
 
     sort(segments.begin(), segments.end())
 
@@ -271,9 +260,9 @@ cdef vector[pair[int, int]] bottom_up_aux(int [:]xs, double [:]ys, int start_idx
     return segments
 
 
-cdef int best_line(int [:] xs, double [:] ys, int seg_start, double max_error):
-    cdef int seg_end = seg_start + 1
-    cdef int n = xs.shape[0]
+cdef Py_ssize_t best_line(Py_ssize_t [:] xs, double [:] ys, Py_ssize_t seg_start, double max_error):
+    cdef Py_ssize_t seg_end = seg_start + 1
+    cdef Py_ssize_t n = xs.shape[0]
     cdef double cost = 0
 
     while seg_end < n-1 and cost < max_error:
@@ -285,14 +274,14 @@ cdef int best_line(int [:] xs, double [:] ys, int seg_start, double max_error):
     return seg_end
 
 
-cpdef np.ndarray[np.uint8_t, ndim=1] swab(int [:] xs, double [:]ys, double max_error):
+cpdef np.ndarray[np.uint8_t, ndim=1] swab(Py_ssize_t [:] xs, double [:]ys, double max_error):
     cdef:
-        int i, idx, window_size, lower_bound, upper_bound, end_buffer, seg_len
-        int first, second
-        int n = xs.shape[0]
+        Py_ssize_t i, idx, window_size, lower_bound, upper_bound, end_buffer, seg_len
+        Py_ssize_t first, second
+        Py_ssize_t n = xs.shape[0]
         np.ndarray[np.uint8_t, ndim = 1] no_removed_indices = np.zeros(n, dtype=bool)
-        vector[pair[int, int]] bottom_up_results
-        int [:] buf_xs
+        vector[pair[Py_ssize_t, Py_ssize_t]] bottom_up_results
+        Py_ssize_t [:] buf_xs
         double [:] buf_ys
 
     window_size = n//4

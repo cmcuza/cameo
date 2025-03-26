@@ -11,7 +11,7 @@ cdef void look_ahead_reheap_mean(HPAcfAgg *acf_model, HPHeap *acf_errors,
                                 double [:]y, long double[:] aggregates, long double *raw_acf,
                                 const HPNode &removed_node, Py_ssize_t hops, Py_ssize_t kappa)
 
-
+                                
 cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_sip(double[:] y, Py_ssize_t hops,
                                                     Py_ssize_t nlags, Py_ssize_t kappa, 
                                                     double acf_threshold)

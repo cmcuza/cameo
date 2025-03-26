@@ -1,3 +1,4 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 from compression.lpc cimport heap
 from compression.lpc.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
@@ -11,13 +12,11 @@ cimport numpy as np
 cimport cython
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef double compute_importance(double[:] points, Node &node):
     cdef:
         double slope, intercept, accum_abs_error
-        int k
+        Py_ssize_t k
 
     slope = (points[node.right] - points[node.left]) / (node.right - node.left)
     intercept = points[node.left] - slope * node.left
@@ -28,54 +27,40 @@ cdef double compute_importance(double[:] points, Node &node):
 
     return accum_abs_error / (node.right-node.left)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_line(double[:] points, int i):
+
+cdef bint is_line(double[:] points, Py_ssize_t i):
     return points[i-1] == points[i] == points[i + 1]
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_concave(double[:] points, int i):
+
+cdef bint is_concave(double[:] points, Py_ssize_t i):
     return (points[i] >= points[i - 1]) and (points[i] >= points[i + 1])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_convex(double[:] points, int i):
+
+cdef bint is_convex(double[:] points, Py_ssize_t i):
     return (points[i - 1] >= points[i]) and (points[i + 1] >= points[i])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_downtrend(double[:] points, int i):
+
+cdef bint is_downtrend(double[:] points, Py_ssize_t i):
     return points[i] > points[i+1] > points[i+3] and points[i] > points[i+2] > points[i+3] \
         and fabs(points[i+2] - points[i+1]) < fabs(points[i] - points[i+2])+fabs(points[i+1] - points[i+3])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_uptrend(double[:] points, int i):
+
+cdef bint is_uptrend(double[:] points, Py_ssize_t i):
     return points[i] < points[i+1] < points[i+3] and points[i] < points[i+2] < points[i+3] \
         and fabs(points[i+1] - points[i+2]) < fabs(points[i] - points[i+2])+fabs(points[i+1] - points[i+3])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef bint is_same_trend(double[:] points, int i):
+
+cdef bint is_same_trend(double[:] points, Py_ssize_t i):
     return fabs(points[i] - points[i+2]) < 0.001 and fabs(points[i+1] - points[i+3]) < 0.001
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int extract_1st_tps_importance(AcfAgg *model, double[:] x, double * raw_acf,
-                                     double acf_error, int * selected_tp,
+
+cdef Py_ssize_t extract_1st_tps_importance(AcfAgg *model, double[:] x, double * raw_acf,
+                                     double acf_error, Py_ssize_t * selected_tp,
                                      double * importance_tp, np.ndarray[np.uint8_t, ndim=1] no_removed_indices):
     cdef:
-        int i, k
-        int n = x.shape[0], tp_count = 1
+        Py_ssize_t i, k
+        Py_ssize_t n = x.shape[0], tp_count = 1
         double slope, intercept, accum_abs_error
         double [:] original_x = np.copy(x)
 
@@ -117,19 +102,17 @@ cdef int extract_1st_tps_importance(AcfAgg *model, double[:] x, double * raw_acf
     return tp_count
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_tp(double[:] y, int nlags, double acf_threshold):
+
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_tp(double[:] y, Py_ssize_t nlags, double acf_threshold):
     cdef:
-        int i, tp_count, lag, n = y.shape[0], left_node_index, right_node_index, start, end
+        Py_ssize_t i, tp_count, lag, n = y.shape[0], left_node_index, right_node_index, start, end
         double ace, x_a, c_acf, inf = INFINITY, node_importance
         double * raw_acf = <double *> malloc(nlags * sizeof(double))
-        int * selected_tp = <int *> malloc(n * sizeof(int))
+        Py_ssize_t * selected_tp = <Py_ssize_t *> malloc(n * sizeof(Py_ssize_t))
         double * importance_tp = <double *> malloc(n * sizeof(double))
         Heap * tp_importance_heap = <Heap *> malloc(sizeof(Heap))
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
-        unordered_map[int, int] map_node_to_heap
+        unordered_map[Py_ssize_t, Py_ssize_t] map_node_to_heap
         Node min_node, left_node, right_node
         np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.zeros(y.shape[0], dtype=bool)
 
@@ -145,7 +128,29 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_tp(double[:] y, int nlags, doub
                                           importance_tp,
                                           no_removed_indices)
 
-    heap.initialize_for_turning_point(tp_importance_heap, map_node_to_heap, importance_tp, selected_tp, tp_count)  # Initialize the heap
+
+    ace = 0.0
+    n = y.shape[0]
+    for lag in range(acf_agg.nlags):
+        n -= 1
+        c_acf = (n * acf_agg.sxy[lag] - acf_agg.xs[lag] * acf_agg.ys[lag]) / \
+                sqrt((n * acf_agg.xss[lag] - acf_agg.xs[lag] * acf_agg.xs[lag]) *
+                        (n * acf_agg.yss[lag] - acf_agg.ys[lag] * acf_agg.ys[lag]))
+        ace += fabs(raw_acf[lag] - c_acf)
+
+    ace /= acf_agg.nlags
+
+    if ace >= acf_threshold:
+        # The error bound cannot be sustained after the first turning point removal
+        heap.release_memory(tp_importance_heap)
+        inc_acf.release_memory(acf_agg)
+        free(raw_acf)
+        free(selected_tp)
+        free(importance_tp)
+        return np.ones(y.shape[0], dtype=bool)
+
+
+    heap.initialize_tp(tp_importance_heap, map_node_to_heap, importance_tp, selected_tp, tp_count)  # Initialize the heap
 
     while tp_importance_heap.values[0].value < inf:
         min_node = heap.pop(tp_importance_heap, map_node_to_heap)

@@ -1,6 +1,7 @@
 # cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 from libc.stdlib cimport malloc, free
 from numpy.math cimport INFINITY
+import cython
 
 cdef Py_ssize_t NODE_TYPE_ROOT = 0
 cdef Py_ssize_t NODE_TYPE_INVALID = -1
@@ -30,6 +31,46 @@ long double *x, Py_ssize_t n):
     for i in range(heap.m_size):
         map_node_to_heap[heap.values[i].ts] = i
 
+
+cdef void initialize_tp(HeapPtr heap, 
+                        MapPtr map_node_to_heap, 
+                        double *import_tp, 
+                        Py_ssize_t *selected_tp, 
+                        Py_ssize_t n):
+    cdef Py_ssize_t i
+    heap.c_size = n
+    heap.m_size = selected_tp[n-1]+1
+    heap.values = <NodePtr> malloc(heap.c_size * sizeof(HPNode))
+    map_node_to_heap.reserve(heap.c_size)
+
+    heap.values[0] = HPNode(import_tp[0], selected_tp[0], -1, selected_tp[1])
+
+    for i in range(1, heap.c_size-1):
+        heap.values[i] = HPNode(import_tp[i], selected_tp[i], selected_tp[i-1], selected_tp[i+1])
+
+    heap.values[n-1] = HPNode(import_tp[n-1], selected_tp[n-1], selected_tp[n-2], selected_tp[n-1]+1)
+
+    heapify(heap)
+
+    for i in range(heap.c_size):
+        map_node_to_heap[heap.values[i].ts] = i
+
+
+cdef void initialize_vw(HeapPtr heap, MapPtr map_node_to_heap, double[:] aucs):
+    cdef Py_ssize_t i
+    heap.c_size = aucs.shape[0]
+    heap.m_size = heap.c_size
+    heap.values = <NodePtr> malloc(heap.m_size * sizeof(HPNode))
+    map_node_to_heap.reserve(heap.m_size)
+
+    for i in range(heap.m_size):
+        heap.values[i] = HPNode(aucs[i], i, i-1, i+1)
+
+    heapify(heap)
+
+    for i in range(heap.m_size):
+        map_node_to_heap[heap.values[i].ts] = i
+
 cdef inline HPNode top(HeapPtr heap):
     return heap.values[0]
 
@@ -37,7 +78,7 @@ cdef inline HPNode top(HeapPtr heap):
 cdef HPNode pop(HeapPtr heap, MapPtr map_node_to_heap):
     cdef HPNode res
     if heap.c_size != 2:
-        res = top(heap)
+        res = heap.values[0]
         heap.c_size -= 1
         map_node_to_heap.erase(res.ts)
         heap.values[NODE_TYPE_ROOT] = heap.values[heap.c_size]
@@ -55,11 +96,17 @@ cdef void insert(HeapPtr heap, MapPtr map_node_to_heap, HPNode node):
 
 cdef void shiftup(HeapPtr heap, Py_ssize_t start, Py_ssize_t end):
     cdef Py_ssize_t parent_idx, child
+    cdef HPNode child_node, parent_node
+
     while end > start:
         child = end
-        parent_idx = (child-1)>>1
-        if heap.values[child].value < heap.values[parent_idx].value:
-            heap.values[child], heap.values[parent_idx] = heap.values[parent_idx], heap.values[child]
+        parent_idx = (child - 1) >> 1
+        child_node = heap.values[child]
+        parent_node = heap.values[parent_idx]
+
+        if (child_node.value < parent_node.value) or \
+           (child_node.value == parent_node.value and child_node.ts < parent_node.ts):
+            heap.values[child], heap.values[parent_idx] = parent_node, child_node
             end = parent_idx
         else:
             break
@@ -67,29 +114,60 @@ cdef void shiftup(HeapPtr heap, Py_ssize_t start, Py_ssize_t end):
 
 cdef void shiftdown(HeapPtr heap, Py_ssize_t start):
     cdef Py_ssize_t iend, istart, ichild, iright
+    cdef HPNode left_node, right_node, parent_node
+
     iend = heap.c_size
     istart = start
     ichild = 2 * istart + 1
+
     while ichild < iend:
         iright = ichild + 1
-        if iright < iend and heap.values[ichild].value > heap.values[iright].value:
-            ichild = iright
-        heap.values[ichild], heap.values[istart] = heap.values[istart], heap.values[ichild]
+        if iright < iend:
+            left_node = heap.values[ichild]
+            right_node = heap.values[iright]
+
+            # Use tie-breaker on value == value
+            if (left_node.value > right_node.value) or \
+               (left_node.value == right_node.value and left_node.ts > right_node.ts):
+                ichild = iright
+
+        heap.values[istart], heap.values[ichild] = heap.values[ichild], heap.values[istart]
         istart = ichild
         ichild = 2 * istart + 1
 
     shiftup(heap, start, istart)
 
+
+cdef void heapify(HeapPtr heap):
+    cdef Py_ssize_t i = heap.m_size//2
+    while i >= 0:
+        shiftdown(heap, i)
+        i -= 1
+
 cdef int bubble_down(HeapPtr heap, MapPtr map_node_to_heap, Py_ssize_t n):
     cdef Py_ssize_t left, right, smallest
+    cdef HPNode l_node, r_node, s_node, n_node
+
     while True:
         left = 2 * n + 1
-        right = 1 + left
+        right = left + 1
         smallest = n
-        if left < heap.c_size and heap.values[left].value < heap.values[smallest].value:
+        n_node = heap.values[n]
+
+        if left < heap.c_size:
+            l_node = heap.values[left]
+            s_node = heap.values[smallest]
+            if (l_node.value < s_node.value) or \
+               (l_node.value == s_node.value and l_node.ts < s_node.ts):
                 smallest = left
-        if right < heap.c_size and heap.values[right].value < heap.values[smallest].value:
+
+        if right < heap.c_size:
+            r_node = heap.values[right]
+            s_node = heap.values[smallest]
+            if (r_node.value < s_node.value) or \
+               (r_node.value == s_node.value and r_node.ts < s_node.ts):
                 smallest = right
+
         if smallest != n:
             heap.values[smallest], heap.values[n] = heap.values[n], heap.values[smallest]
             map_node_to_heap[heap.values[n].ts] = n
@@ -97,6 +175,7 @@ cdef int bubble_down(HeapPtr heap, MapPtr map_node_to_heap, Py_ssize_t n):
         else:
             map_node_to_heap[heap.values[n].ts] = n
             return n
+
 
 
 cdef int bubble_down_exp(HeapPtr heap, MapPtr map_node_to_heap, Py_ssize_t n):
@@ -114,11 +193,6 @@ cdef int bubble_down_exp(HeapPtr heap, MapPtr map_node_to_heap, Py_ssize_t n):
         left = 2 * n + 1
 
 
-cdef void heapify(HeapPtr heap):
-    cdef Py_ssize_t i = heap.m_size//2
-    while i >= 0:
-        shiftdown(heap, i)
-        i -= 1
 
 
 cdef int bubble_up(HeapPtr heap, MapPtr map_node_to_heap, Py_ssize_t n):

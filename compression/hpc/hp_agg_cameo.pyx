@@ -5,20 +5,25 @@ from compression.hpc cimport hp_heap as heap_lib
 from compression.hpc.hp_acf_agg_model cimport HPAcfAgg
 from compression.hpc.hp_heap cimport HPHeap, HPNode
 from libcpp.unordered_map cimport unordered_map
-from libc.stdlib cimport malloc, free
+from libc.math cimport isnan, isinf
+from libc.stdlib cimport malloc, free, calloc
 from libc.math cimport fabsl, sqrtl
 import numpy as np
 cimport numpy as np
 from numpy.math cimport INFINITY
 
 
-cdef void look_ahead_reheap_mean(HPAcfAgg *acf_model, HPHeap *acf_errors, 
+cdef void look_ahead_reheap_mean(HPAcfAgg *acf_model, 
+                                HPHeap *acf_errors, 
                                 unordered_map[Py_ssize_t, Py_ssize_t] &map_node_to_heap,
-                                double [:]y, long double[:] aggregates, long double *raw_acf,
-                                const HPNode &removed_node, Py_ssize_t hops, Py_ssize_t kappa):
+                                double [:] y, 
+                                long double[:] aggregates, 
+                                long double *raw_acf,
+                                const HPNode &removed_node, 
+                                Py_ssize_t hops, 
+                                Py_ssize_t kappa):
     cdef:
-        Py_ssize_t i, ii, left_node_index, right_node_index, start, end, end_index_a, start_index_a,\
-            real_size, n, lag, index, num_lags, max_nd, agg_index, num_agg_deltas, diff
+        Py_ssize_t i, ii, left_node_index, right_node_index, start, end, end_index_a, start_index_a,real_size, n, lag, index, num_lags, max_nd, agg_index, num_agg_deltas, diff
         long double x_a, delta, delta_ss, ys, yss, xs, xss, sxy, lag_acf, slope
         HPNode neighbor_node, left_node, right_node
         HPNode * neighbors = <HPNode *> malloc(2 * hops * sizeof(HPNode))
@@ -166,8 +171,8 @@ cdef void look_ahead_reheap_mean(HPAcfAgg *acf_model, HPHeap *acf_errors,
 cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_sip(double[:] y, Py_ssize_t hops,
                                                     Py_ssize_t nlags, Py_ssize_t kappa, 
                                                     double acf_threshold):
-    cdef Py_ssize_t start, end, lag, n, num_agg, i
-    cdef long double ace, x_a, right_area, left_area, c_acf, inf
+    cdef Py_ssize_t start, end, lag, n, num_agg
+    cdef long double ace, x_a, c_acf, inf
     cdef long double * raw_acf
     cdef long double * error_values
     cdef long double[:] aggregates
@@ -180,7 +185,6 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_sip(double[:] y, Py_ssize_t
     n = y.shape[0]
     num_agg = n // kappa
 
-    i = 0
     ace = 0.0
     inf = INFINITY
     aggregates = np.empty(num_agg, dtype=np.longdouble)
@@ -191,18 +195,18 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_sip(double[:] y, Py_ssize_t
     acf_model_lib.fit(acf_model, y, aggregates, kappa)  # extract the aggregates
     acf_model_lib.get_acf(acf_model, raw_acf)  # get raw acf
     math_lib.compute_acf_agg_mean_fall(acf_model, y, aggregates, raw_acf, error_values, n, kappa)
+    # initialize the heap with the impact on the acf of each point
     heap_lib.initialize(acf_err_heap, map_node_to_heap, error_values, n) # Initialize the heap
+    
 
-    ts_order = []
     while acf_err_heap.values[0].value < inf:
         min_node = heap_lib.pop(acf_err_heap, map_node_to_heap) # TODO: make it a reference
-        ts_order.append((min_node.ts, min_node.value))
-
+        
         if min_node.value != 0:
             start = min_node.left
             end = min_node.right
             if start + 2 < end:
-                acf_model_lib.interpolate_update_mean(acf_model, y, aggregates, start, end, kappa)
+                acf_model_lib.interpolate_update(acf_model, y, aggregates, start, end, kappa)
             else:
                 x_a = (y[end]-y[start]) / (end-start) + y[start]
                 acf_model_lib.update(acf_model, y, aggregates, x_a, start + 1, kappa)
@@ -223,9 +227,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_sip(double[:] y, Py_ssize_t
 
         no_removed_indices[min_node.ts] = False
         heap_lib.update_left_right(acf_err_heap, map_node_to_heap, min_node.left, min_node.right)
-        # look_ahead_reheap_mean(acf_model, acf_err_heap, map_node_to_heap, y, aggregates, raw_acf, min_node, hops, kappa)
+        look_ahead_reheap_mean(acf_model, acf_err_heap, map_node_to_heap, y, aggregates, raw_acf, min_node, hops, kappa)
 
-    np.save("ts_order.npy", ts_order)
+
     heap_lib.release_memory(acf_err_heap)
     acf_model_lib.release_memory(acf_model)
     free(error_values)

@@ -1,3 +1,4 @@
+# cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
 from compression.lpc.pip_heap cimport PIPHeap, PIPNode
 from compression.lpc.inc_acf cimport AcfAgg
 from compression.lpc cimport pip_heap
@@ -10,12 +11,10 @@ cimport numpy as np
 cimport cython
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef simplify_by_pip(double[:] y, int nlags, double acf_threshold):
+
+cpdef simplify_by_pip(double[:] y, Py_ssize_t nlags, double acf_threshold):
     cdef:
-        int N = y.shape[0], i, start, left, n = y.shape[0]
+        Py_ssize_t N = y.shape[0], i, start, left, n = y.shape[0]
         AcfAgg * acf_agg = <AcfAgg *> malloc(sizeof(AcfAgg))
         PIPNode min_node
         PIPHeap * pip_importance_heap = <PIPHeap *> malloc(sizeof(PIPHeap))

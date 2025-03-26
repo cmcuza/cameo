@@ -20,6 +20,14 @@ ctypedef unordered_map[Py_ssize_t, Py_ssize_t]& MapPtr
 
 cdef void initialize(HeapPtr heap, MapPtr map_node_to_heap, long double * errors, Py_ssize_t n)
 
+cdef void initialize_tp(HeapPtr heap, 
+                        MapPtr map_node_to_heap, 
+                        double *import_tp, 
+                        Py_ssize_t *selected_tp, 
+                        Py_ssize_t n)
+
+cdef void initialize_vw(HeapPtr heap, MapPtr map_node_to_heap, double[:] aucs)
+                        
 cdef inline Py_ssize_t parent(Py_ssize_t n)
 
 cdef HPNode pop(HeapPtr heap, MapPtr map_node_to_heap)
