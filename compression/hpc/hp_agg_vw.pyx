@@ -1,7 +1,8 @@
 # cython: language_level=3, cdivision=True, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, infer_types=True
-from compression.hpc cimport hp_heap
+from compression.lpc cimport heap
+from compression.lpc cimport vw
 from compression.hpc cimport hp_math_lib
-from compression.hpc.hp_heap cimport HPHeap, HPNode
+from compression.lpc.heap cimport Heap, Node
 from libcpp.unordered_map cimport unordered_map
 from libc.stdlib cimport malloc, free
 from compression.hpc cimport hp_acf_agg_model
@@ -9,36 +10,6 @@ from compression.hpc.hp_acf_agg_model cimport HPAcfAgg
 from numpy.math cimport INFINITY
 import numpy as np
 cimport numpy as np
-cimport cython
-
-
-cdef double[:] triangle_areas_from_array(long[:] x, double[:] y):
-    cdef:
-        long n = x.shape[0], i
-        np.ndarray[double, ndim=1] result = np.empty((n,), np.float64)
-        long[:] x_p1 = x[:n-2]
-        double[:] y_p1 = y[:n-2]
-        long[:] x_p2 = x[1:n-1]
-        double[:] y_p2 = y[1:n-1]
-        long[:] x_p3 = x[2:]
-        double[:] y_p3 = y[2:]
-
-        np.ndarray[double, ndim=1] accr = np.empty((n-2,), np.float64)  # Accumulate directly into result
-        np.ndarray[double, ndim=1] acc1 = np.empty_like(accr)
-
-    np.subtract(y_p2, y_p3, out=accr)
-    np.multiply(x_p1, accr, out=accr)
-    np.subtract(y_p3, y_p1, out=acc1)
-    np.multiply(x_p2, acc1, out=acc1)
-    np.add(acc1, accr, out=accr)
-    np.subtract(y_p1, y_p2, out=acc1)
-    np.multiply(x_p3, acc1, out=acc1)
-    np.add(acc1, accr, out=accr)
-    np.abs(accr, out=accr)
-    accr = np.multiply(accr, 0.5)
-    result[1:n-1] = accr
-    result[0] = result[n-1] = np.inf
-    return result
 
 
 cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_vw(long [:] x, double[:] y, Py_ssize_t nlags, Py_ssize_t kappa, double acf_threshold):
@@ -47,23 +18,22 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_vw(long [:] x, double[:] y,
         double ace = 0.0, x_a, right_area, left_area, inf = INFINITY
         double[:] real_areas
         long double[:] aggregates = np.empty(n // kappa, dtype=np.longdouble)
-        long double * raw_acf = <long double *> malloc(nlags * sizeof(double))
-        long double * c_acf = <long double *> malloc(nlags * sizeof(double))
-        HPHeap * area_heap = <HPHeap *> malloc(sizeof(HPHeap))
+        long double * raw_acf = <long double *> malloc(nlags * sizeof(long double))
+        long double * c_acf = <long double *> malloc(nlags * sizeof(long double))
+        Heap * area_heap = <Heap *> malloc(sizeof(Heap))
         HPAcfAgg * acf_model = <HPAcfAgg *> malloc(sizeof(HPAcfAgg))
         unordered_map[Py_ssize_t, Py_ssize_t] map_node_to_heap
-        HPNode min_node, left, right
+        Node min_node, left, right
         np.ndarray[np.uint8_t, ndim=1] no_removed_indices = np.ones(x.shape[0], dtype=bool)
 
-    real_areas = triangle_areas_from_array(x, y) # computing the areas for all triangles
-    hp_heap.initialize_vw(area_heap, map_node_to_heap, real_areas) # Initialize the heap
+    real_areas = vw.triangle_areas_from_array(x, y) # computing the areas for all triangles
+    heap.initialize_vw(area_heap, map_node_to_heap, real_areas) # Initialize the heap
     hp_acf_agg_model.initialize(acf_model, nlags) # initialize the aggregates
     hp_acf_agg_model.fit(acf_model, y, aggregates, kappa) # extract the aggregates
     hp_acf_agg_model.get_acf(acf_model, raw_acf) # get raw acf
 
-
     while area_heap.values[0].value < inf:
-        min_node = hp_heap.pop(area_heap, map_node_to_heap) # TODO: make it a reference
+        min_node = heap.pop(area_heap, map_node_to_heap) # TODO: make it a reference
 
         if min_node.value != 0:
             start = min_node.left
@@ -82,7 +52,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_vw(long [:] x, double[:] y,
 
         no_removed_indices[min_node.ts] = False
 
-        hp_heap.get_update_left_right(area_heap, map_node_to_heap, min_node, left, right)
+        heap.get_update_left_right(area_heap, map_node_to_heap, min_node, left, right)
 
         if right.ts != -1:
             right_area = hp_math_lib.triangle_area(x[right.ts], y[right.ts],
@@ -93,7 +63,7 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_vw(long [:] x, double[:] y,
                 right_area = min_node.value
 
             right.value = right_area
-            hp_heap.reheap(area_heap, map_node_to_heap, right)
+            heap.reheap(area_heap, map_node_to_heap, right)
         if left.ts != -1:
             left_area = hp_math_lib.triangle_area(x[left.ts], y[left.ts],
                                       x[left.left], y[left.left],
@@ -103,9 +73,9 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_agg_vw(long [:] x, double[:] y,
                 left_area = min_node.value
 
             left.value = left_area
-            hp_heap.reheap(area_heap, map_node_to_heap, left)
+            heap.reheap(area_heap, map_node_to_heap, left)
 
-    hp_heap.release_memory(area_heap)
+    heap.release_memory(area_heap)
     hp_acf_agg_model.release_memory(acf_model)
     free(raw_acf)
     free(c_acf)

@@ -7,6 +7,7 @@ from libc.math cimport sqrt, fabs
 from compression.lpc cimport inc_acf
 from compression.lpc.inc_acf cimport AcfAgg
 from numpy.math cimport INFINITY
+from libc.stdio cimport printf
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -141,8 +142,8 @@ cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_tp(double[:] y, Py_ssize_t nlag
     ace /= acf_agg.nlags
 
     if ace >= acf_threshold:
-        # The error bound cannot be sustained after the first turning point removal
-        heap.release_memory(tp_importance_heap)
+        printf("WARNING: The error bound cannot be guaranteed after the first turning point removal \n")
+        printf("WARNING: Returning the whole ts back \n")
         inc_acf.release_memory(acf_agg)
         free(raw_acf)
         free(selected_tp)

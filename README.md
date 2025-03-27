@@ -64,14 +64,13 @@ if __name__ == '__main__':
     nlags = data_loader.seasonality
     y = np.squeeze(data_loader.data.values)
     x = np.arange(y.shape[0])
-    hops = np.log(y.shape[0])*10
     kappa = data_loader.aggregation
 
     line_simp = LineSimplification()
-    line_simp.set_target(target='vw') # or tp, pip, swab
-    comp_y = line_simp.compress(y.copy(), error_bound, nlags, hops, kappa)
+    line_simp.set_target(target='vw') # can be vw, tp, pip
+    comp_y = line_simp.compress(y.copy(), error_bound, nlags, None, kappa)
     decomp_y = line_simp.decompress(comp_y)
-    print('Compression ratio:', round(y.shape[0]/np.sum(comp_y), 2))
+    print('Compression ratio:', round(y.shape[0]/comp_y.shape[0], 2))
     print('Decompression NRMSE:', np.round(nrmse(decomp_y, y), 4))
 ```
 

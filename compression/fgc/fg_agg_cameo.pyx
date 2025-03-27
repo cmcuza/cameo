@@ -6,9 +6,7 @@ from compression.hpc.hp_acf_agg_model cimport HPAcfAgg
 from compression.hpc.hp_heap cimport HPHeap, HPNode
 from libcpp.unordered_map cimport unordered_map
 from cython.parallel cimport prange, parallel
-from libc.math cimport isnan, nan
 from numpy.math cimport INFINITY
-from libc.stdio cimport printf
 from libc.stdlib cimport malloc, free
 from libc.math cimport sqrtl, fabsl
 import numpy as np
@@ -77,7 +75,7 @@ cdef void parallel_look_ahead_reheap(HPAcfAgg *acf_model,
         xs_s = <long double *> malloc(acf_model.nlags * sizeof(long double))
         sum_agg_deltas = <long double *> malloc(max_nd * sizeof(long double))
 
-        for i in prange(real_size, schedule='dynamic'):
+        for i in prange(real_size, schedule='static'):
             neighbor_node = neighbors[i]
             start = neighbor_node.left
             end = neighbor_node.right
@@ -177,7 +175,7 @@ cdef void parallel_look_ahead_reheap(HPAcfAgg *acf_model,
     free(nb_imp)
 
 
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_agg_sip(double[:] ts,
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_agg_sip(double[:] ts, 
                                                             Py_ssize_t hops,
                                                             Py_ssize_t nlags, 
                                                             Py_ssize_t kappa, 

@@ -1,9 +1,9 @@
 import numpy as np
 from compression.lpc.cameo import simplify_by_sip
-from compression.lpc.visvalingam_whyat import simplify_by_vw
+from compression.lpc.vw import simplify_by_vw
 from compression.lpc.pip import simplify_by_pip
-from compression.lpc.turning_point import simplify_by_tp
-from compression.lpc.swab import simplify_by_swab
+from compression.lpc.tp import simplify_by_tp
+from compression.lpc.swab import swab
 
 
 def compute_error(args):
@@ -40,7 +40,7 @@ class LineSimplification(object):
         self.no_removed_indices = simplify_by_tp(self.x[:, 1], self.nlags, self.acf_threshold)
 
     def simplify_swab(self):
-        self.no_removed_indices = simplify_by_swab(self.x[:, 0].astype(int), self.x[:, 1], self.acf_threshold)
+        self.no_removed_indices = swab(self.x[:, 0].astype(int), self.x[:, 1], self.acf_threshold)
 
     def simplify_sip(self):
         self.no_removed_indices = simplify_by_sip(self.x[:, 1], self.blocking, self.nlags, self.acf_threshold)

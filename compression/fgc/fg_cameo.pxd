@@ -15,7 +15,7 @@ cdef void parallel_look_ahead_reheap(AcfAgg *acf_agg,
                                     Py_ssize_t hops, 
                                     Py_ssize_t num_threads)
 
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_sip(double[:] ts,
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_sip(double[:] ts, 
                                                         Py_ssize_t hops, 
                                                         Py_ssize_t nlags, 
                                                         double acf_threshold, 

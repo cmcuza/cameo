@@ -70,7 +70,7 @@ cdef void parallel_look_ahead_reheap(AcfAgg *acf_agg,
         sx_s = <double *> malloc(acf_agg.nlags * sizeof(double))
         deltas = <double *> malloc(max_nd * sizeof(double))
 
-        for i in prange(real_size, schedule='dynamic'):
+        for i in prange(real_size, schedule='guided'):
             neighbor_node = neighbors[i]
             start = neighbor_node.left
             end = neighbor_node.right
@@ -161,7 +161,7 @@ cdef void parallel_look_ahead_reheap(AcfAgg *acf_agg,
     free(nb_imp)
 
 
-cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_sip(double[:] ts,
+cpdef np.ndarray[np.uint8_t, ndim=1] simplify_by_fg_sip(double[:] ts, 
                             Py_ssize_t hops, 
                             Py_ssize_t nlags, 
                             double acf_threshold, 

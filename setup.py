@@ -19,13 +19,6 @@ extensions = [
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
     ),
     Extension(
-        name="compression.lpc.agg_cameo",
-        sources=["compression/lpc/agg_cameo.pyx"],
-        language="c++",
-        extra_compile_args=[openmp_arg, opt_compiler],
-        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
-    ),
-    Extension(
         name="compression.lpc.heap",
         sources=["compression/lpc/heap.pyx"],
         language="c++",
@@ -44,26 +37,20 @@ extensions = [
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compression.lpc.visvalingam_whyat",
-        sources=["compression/lpc/visvalingam_whyat.pyx"],
+        name="compression.lpc.vw",
+        sources=["compression/lpc/vw.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
-        name="compression.lpc.turning_point",
-        sources=["compression/lpc/turning_point.pyx"],
+        name="compression.lpc.tp",
+        sources=["compression/lpc/tp.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
     Extension(
         name="compression.lpc.inc_acf",
         sources=["compression/lpc/inc_acf.pyx"],
-        language="c++",
-        extra_compile_args=[opt_compiler]
-    ),
-    Extension(
-        name="compression.lpc.inc_acf_agg",
-        sources=["compression/lpc/inc_acf_agg.pyx"],
         language="c++",
         extra_compile_args=[opt_compiler]
     ),
@@ -112,6 +99,41 @@ extensions = [
     Extension(
         name="compression.hpc.hp_math_lib",
         sources=["compression/hpc/hp_math_lib.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_agg_pip",
+        sources=["compression/hpc/hp_agg_pip.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_agg_tp",
+        sources=["compression/hpc/hp_agg_tp.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.hpc.hp_agg_vw",
+        sources=["compression/hpc/hp_agg_vw.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.fgc.fg_cameo",
+        sources=["compression/fgc/fg_cameo.pyx"],
+        language="c++",
+        extra_compile_args=[openmp_arg, opt_compiler],
+        extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
+    ),
+    Extension(
+        name="compression.fgc.fg_agg_cameo",
+        sources=["compression/fgc/fg_agg_cameo.pyx"],
         language="c++",
         extra_compile_args=[openmp_arg, opt_compiler],
         extra_link_args=[openmp_arg] if '-f' in openmp_arg else []
