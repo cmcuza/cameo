@@ -76,10 +76,6 @@ if __name__ == '__main__':
 
 The same procedure applies for `turning points (tp)`, `perceptual important points (pip)` and `swab (swab)`. 
 
-### Running PMC, SWING and SP
-
-Install [TerseTS](https://github.com/cmcuza/TerseTS/) and you are ready to go!
-
 ### Running Anomaly Detection Experiments
 
 Just run `run_anomaly_detection_exp.py` with the desired `compressor` and `error bound`.
