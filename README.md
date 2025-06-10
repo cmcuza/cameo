@@ -76,11 +76,3 @@ if __name__ == '__main__':
 
 The same procedure applies for `turning points (tp)`, `perceptual important points (pip)` and `swab (swab)`. 
 
-### Running Anomaly Detection Experiments
-
-Just run `run_anomaly_detection_exp.py` with the desired `compressor` and `error bound`.
-
-### Running Forecasting Experiments
-
-Just run `run_forecasting_exp.py` with the desired `compressor` and `error bound`.
-
